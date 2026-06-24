@@ -210,12 +210,17 @@ void AimEngine::RunLoop() {
         float sx = static_cast<float>(cfg.capture_size) / detector_.InputWidth();
         float sy = static_cast<float>(cfg.capture_size) / detector_.InputHeight();
 
-        // 5) 目标选择（几何正中心）
+        // 5) 目标选择：在 FOV 范围内选距画面中心最近的敌人
         float frameCX = static_cast<float>(cfg.capture_size) / 2.0f;
         float frameCY = static_cast<float>(cfg.capture_size) / 2.0f;
-        const Detection* target = selector_.SelectBest(detections, frameCX / sx, frameCY / sy, cfg.target_class_ids);
+        // FOV 半径（模型输入空间）：aim_range_size% * 模型尺寸 / 2
+        float fovRadiusModel = (cfg.aim_range_size / 100.0f) * detector_.InputWidth() / 2.0f;
+        float frameCX_model = frameCX / sx;
+        float frameCY_model = frameCY / sy;
+        const Detection* target = selector_.SelectBest(detections, frameCX_model, frameCY_model,
+                                                       cfg.target_class_ids, fovRadiusModel);
 
-        // 6) 瞄准键按下 → 鼠标移动（坐标系转换 + FOV 范围检查 + 死区）
+        // 6) 瞄准键按下 → 鼠标移动（坐标系转换 + 死区 + 平滑 + 灵敏度）
         if (target && (GetAsyncKeyState(cfg.aim_key) & 0x8000)) {
             // 目标坐标从模型空间缩放到截图空间
             // X = 框水平中心；Y = 框顶部 + height * target_y_ratio（头部/胸部/腹部偏移）
@@ -225,17 +230,14 @@ void AimEngine::RunLoop() {
             double offsetX = targetCX - frameCX;
             double offsetY = targetCY - frameCY;
 
-            // FOV 范围检查：只瞄准 aim_range_size% 范围内的目标
-            float halfRange = (cfg.aim_range_size / 100.0f) * cfg.capture_size / 2.0f;
-            float dist = std::sqrt(static_cast<float>(offsetX * offsetX + offsetY * offsetY));
-
             // 死区：偏移 < 3px 不移动（防止微小抖动）
             bool inDeadZone = (std::abs(offsetX) < 3.0 && std::abs(offsetY) < 3.0);
 
-            if (dist <= halfRange && !inDeadZone) {
-                double dx = offsetX * cfg.aim_smoothing;
-                double dy = offsetY * cfg.aim_smoothing;
-                mouse_.MoveMouse(dx, dy, cfg.sensitivity);
+            if (!inDeadZone) {
+                // 平滑 + 灵敏度
+                double dx = offsetX * cfg.aim_smoothing * cfg.sensitivity;
+                double dy = offsetY * cfg.aim_smoothing * cfg.sensitivity;
+                mouse_.MoveMouse(dx, dy, 1.0);  // sensitivity 已乘入 dx/dy
             }
         }
 
@@ -245,52 +247,100 @@ void AimEngine::RunLoop() {
             visFrame = frame.clone();
 
             int capSize = cfg.capture_size;
+            int geoCX = static_cast<int>(frameCX);
+            int geoCY = capSize / 2;
             // sx, sy 已在步骤4计算（模型输入空间 → 截图空间）
 
             // ── 检测框（受 draw_detection_boxes 控制） ──
             if (cfg.draw_detection_boxes) {
                 static int drawDiagCount = 0;
-                // 只绘制置信度最高的前 5 个框，减少视觉混乱
-                const int maxDrawBoxes = 5;
+                // 最多绘制 20 个框，避免性能问题
+                const int maxDrawBoxes = 20;
                 int drawnCount = 0;
                 for (const auto& det : detections) {
                     if (drawnCount >= maxDrawBoxes) break;
 
-                    // det.x1/y1/x2/y2 是归一化到 [0,1] 的坐标（已 / inputW/H）
-                    // 映射到截图空间：直接 * capSize
+                    // det.x1/y1/x2/y2 是归一化到 [0,1] 的坐标
                     int dx1 = static_cast<int>(det.x1 * capSize);
                     int dy1 = static_cast<int>(det.y1 * capSize);
                     int dx2 = static_cast<int>(det.x2 * capSize);
                     int dy2 = static_cast<int>(det.y2 * capSize);
 
-                    // 每 60 帧打印一次绘制诊断（仅前 5 个）
-                    if (drawDiagCount % 60 == 0 && drawnCount < 5) {
-                        std::cout << "[Draw] det cls=" << det.class_id
-                                  << " norm=(" << det.x1 << "," << det.y1 << " " << det.x2 << "," << det.y2 << ")"
-                                  << " sx=" << sx << " sy=" << sy
-                                  << " pixel=(" << dx1 << "," << dy1 << " " << dx2 << "," << dy2 << ")"
-                                  << " capSize=" << capSize << std::endl;
-                    }
-
                     bool isTargetClass = false;
                     for (int tcid : cfg.target_class_ids) {
                         if (det.class_id == tcid) { isTargetClass = true; break; }
                     }
-                    cv::Scalar color = isTargetClass
-                                       ? cv::Scalar(0, 255, 0)   // 目标类：绿色
-                                       : cv::Scalar(0, 0, 255);  // 其他：红色
+
+                    // 判断是否在 FOV 内
+                    float detCX = det.center_x();
+                    float detCY = det.center_y();
+                    float detDist = std::sqrt(
+                        (detCX - frameCX_model) * (detCX - frameCX_model) +
+                        (detCY - frameCY_model) * (detCY - frameCY_model));
+                    bool inFOV = (detDist <= fovRadiusModel);
+
+                    // 判断是否是当前锁定的目标
+                    bool isLockedTarget = (target != nullptr &&
+                        det.class_id == target->class_id &&
+                        std::abs(det.x1 - target->x1) < 0.001f &&
+                        std::abs(det.y1 - target->y1) < 0.001f);
+
+                    // 颜色规则：
+                    //   - 锁定目标（最近 + FOV内）：金黄色粗框
+                    //   - 目标类 + FOV内：绿色
+                    //   - 目标类 + FOV外：暗绿色
+                    //   - 非目标类：红色
+                    cv::Scalar color;
+                    int thickness = 2;
+                    if (isLockedTarget) {
+                        color = cv::Scalar(0, 215, 255);  // 金黄色 (BGR)
+                        thickness = 3;
+                    } else if (isTargetClass && inFOV) {
+                        color = cv::Scalar(0, 255, 0);    // 亮绿色
+                    } else if (isTargetClass && !inFOV) {
+                        color = cv::Scalar(0, 128, 0);    // 暗绿色
+                    } else {
+                        color = cv::Scalar(0, 0, 255);    // 红色
+                    }
+
                     cv::rectangle(visFrame, cv::Point(dx1, dy1), cv::Point(dx2, dy2),
-                                  color, 2);
+                                  color, thickness);
+
+                    // 锁定目标额外绘制瞄准线
+                    if (isLockedTarget) {
+                        // 瞄准点（body part 偏移位置）
+                        int aimPX = static_cast<int>(
+                            (det.x1 + det.width() * 0.5f) * capSize);
+                        int aimPY = static_cast<int>(
+                            (det.y1 + det.height() * cfg.target_y_ratio) * capSize);
+                        cv::line(visFrame, cv::Point(geoCX, geoCY),
+                                 cv::Point(aimPX, aimPY),
+                                 cv::Scalar(0, 215, 255), 1, cv::LINE_AA);
+                        cv::circle(visFrame, cv::Point(aimPX, aimPY), 4,
+                                   cv::Scalar(0, 215, 255), -1, cv::LINE_AA);
+
+                        // 锁定标签
+                        std::string lockLabel = "LOCK cls:" + std::to_string(det.class_id)
+                            + " cf:" + std::to_string(static_cast<int>(det.confidence * 100)) + "%"
+                            + " d:" + std::to_string(static_cast<int>(detDist));
+                        cv::putText(visFrame, lockLabel,
+                            cv::Point(dx1, dy1 - 10),
+                            cv::FONT_HERSHEY_SIMPLEX, 0.40,
+                            cv::Scalar(0, 215, 255), 1, cv::LINE_AA);
+                    }
 
                     drawnCount++;
                 }
                 drawDiagCount++;
 
-                // 检测数调试文字（左上角） + 模型格式信息
+                // 检测数调试文字（左上角）
                 std::string detInfo = "dets:" + std::to_string(detections.size())
-                                    + " fps:" + std::to_string(static_cast<int>(current_fps_.load()));
+                                    + " fps:" + std::to_string(static_cast<int>(current_fps_.load()))
+                                    + " fov:" + std::to_string(cfg.aim_range_size) + "%"
+                                    + " sens:" + std::to_string(cfg.sensitivity).substr(0, 4)
+                                    + " smooth:" + std::to_string(cfg.aim_smoothing).substr(0, 4);
                 cv::putText(visFrame, detInfo, cv::Point(6, 18),
-                            cv::FONT_HERSHEY_SIMPLEX, 0.45, cv::Scalar(0, 255, 0), 1, cv::LINE_8);
+                            cv::FONT_HERSHEY_SIMPLEX, 0.40, cv::Scalar(0, 255, 0), 1, cv::LINE_8);
 
                 // 模型输出格式信息（第2行）
                 std::string fmtInfo = "fmt:" + std::to_string(detector_.InputWidth()) + "x"
@@ -298,45 +348,25 @@ void AimEngine::RunLoop() {
                                     + " nc:" + std::to_string(detector_.NumClasses())
                                     + " nb:" + std::to_string(detector_.NumBoxes())
                                     + (detector_.IsTransposed() ? " T" : " N");
-                cv::putText(visFrame, fmtInfo, cv::Point(6, 38),
-                            cv::FONT_HERSHEY_SIMPLEX, 0.40, cv::Scalar(255, 255, 0), 1, cv::LINE_8);
+                cv::putText(visFrame, fmtInfo, cv::Point(6, 34),
+                            cv::FONT_HERSHEY_SIMPLEX, 0.35, cv::Scalar(255, 255, 0), 1, cv::LINE_8);
 
-                // ── RAW 输出值诊断（采样 box 0~2）──
-                // 格式: [cx, cy, w, h, cls0, cls1, cls2] (网格空间原始值)
-                const float* raw = detector_.RawOutput();
-                int outCols = detector_.OutputCols();
-                int outStride = detector_.OutputStride();
-                bool transp = detector_.IsTransposed();
-                auto raw_idx = [&](int box, int col) -> int {
-                    return transp ? (box * outStride + col) : (col * outStride + box);
-                };
-                for (int bi = 0; bi < 3; bi++) {
-                    char rbuf[256];
-                    snprintf(rbuf, sizeof(rbuf), "raw[%d]=%.2f,%.2f,%.2f,%.2f |c0:%.2f c1:%.2f c2:%.2f",
-                        bi,
-                        raw[raw_idx(bi, 0)], raw[raw_idx(bi, 1)],
-                        raw[raw_idx(bi, 2)], raw[raw_idx(bi, 3)],
-                        raw[raw_idx(bi, 4)], raw[raw_idx(bi, 5)],
-                        outCols > 6 ? raw[raw_idx(bi, 6)] : 0.0f);
-                    cv::putText(visFrame, std::string(rbuf), cv::Point(6, 56 + bi * 18),
-                                cv::FONT_HERSHEY_SIMPLEX, 0.30, cv::Scalar(0, 255, 255), 1, cv::LINE_8);
-                }
-
-                // 前 3 个检测结果（继续往下画）
-                for (int di = 0; di < 3 && di < static_cast<int>(detections.size()); di++) {
-                    const auto& d = detections[di];
-                    char buf[256];
-                    snprintf(buf, sizeof(buf), "det#%d c%d (%.2f,%.2f %.2f,%.2f) cf:%.2f",
-                        di, d.class_id,
-                        d.x1, d.y1, d.x2, d.y2, d.confidence);
-                    cv::putText(visFrame, std::string(buf), cv::Point(6, 110 + di * 18),
-                                cv::FONT_HERSHEY_SIMPLEX, 0.32, cv::Scalar(255, 0, 255), 1, cv::LINE_8);
+                // 目标信息（第3行）
+                if (target) {
+                    char tbuf[128];
+                    snprintf(tbuf, sizeof(tbuf), "TGT cls:%d cf:%.0f%% dist:%.0f",
+                        target->class_id, target->confidence * 100,
+                        std::sqrt((target->center_x() - frameCX_model) * (target->center_x() - frameCX_model)
+                                + (target->center_y() - frameCY_model) * (target->center_y() - frameCY_model)));
+                    cv::putText(visFrame, std::string(tbuf), cv::Point(6, 52),
+                                cv::FONT_HERSHEY_SIMPLEX, 0.35, cv::Scalar(0, 215, 255), 1, cv::LINE_8);
+                } else {
+                    cv::putText(visFrame, "TGT: none", cv::Point(6, 52),
+                                cv::FONT_HERSHEY_SIMPLEX, 0.35, cv::Scalar(128, 128, 128), 1, cv::LINE_8);
                 }
             }
 
             // ── 几何中心十字准星（白色，始终在画面正中心） ──
-            int geoCX = static_cast<int>(frameCX);
-            int geoCY = capSize / 2;
             int crossLen = 16;
             cv::line(visFrame, cv::Point(geoCX - crossLen, geoCY),
                      cv::Point(geoCX + crossLen, geoCY),

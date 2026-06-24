@@ -4,7 +4,8 @@
 
 const Detection* TargetSelector::SelectBest(const std::vector<Detection>& detections,
                                              float frameCenterX, float frameCenterY,
-                                             const std::vector<int>& targetClassIds) const {
+                                             const std::vector<int>& targetClassIds,
+                                             float fovRadius) const {
     const Detection* best = nullptr;
     float bestDist = 1e9f;
 
@@ -16,7 +17,10 @@ const Detection* TargetSelector::SelectBest(const std::vector<Detection>& detect
 
         float dx = det.center_x() - frameCenterX;
         float dy = det.center_y() - frameCenterY;
-        float dist = dx * dx + dy * dy;
+        float dist = std::sqrt(dx * dx + dy * dy);
+
+        // FOV 范围过滤（fovRadius > 0 时生效）
+        if (fovRadius > 0.0f && dist > fovRadius) continue;
 
         if (dist < bestDist) {
             bestDist = dist;
@@ -25,6 +29,14 @@ const Detection* TargetSelector::SelectBest(const std::vector<Detection>& detect
     }
 
     return best;
+}
+
+bool TargetSelector::IsInFOV(const Detection& det, float centerX, float centerY,
+                              float fovRadius) const {
+    if (fovRadius <= 0.0f) return true;
+    float dx = det.center_x() - centerX;
+    float dy = det.center_y() - centerY;
+    return std::sqrt(dx * dx + dy * dy) <= fovRadius;
 }
 
 void TargetSelector::MapToFrame(const Detection& src, Detection& dst,
