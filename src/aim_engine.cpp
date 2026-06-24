@@ -206,27 +206,22 @@ void AimEngine::RunLoop() {
         double inferMs    = std::chrono::duration<double, std::milli>(inferEnd - inferStart).count();
         current_infer_ms_.store(inferMs);
 
-        // 4) 坐标映射因子：模型输入空间 → 截图空间（必须在目标选择和鼠标移动之前计算）
-        float sx = static_cast<float>(cfg.capture_size) / detector_.InputWidth();
-        float sy = static_cast<float>(cfg.capture_size) / detector_.InputHeight();
+        // 4) 目标选择：在 FOV 范围内选距画面中心最近的敌人
+        // Detection 坐标已归一化到 [0,1]，所以 frameCenter 和 fovRadius 也需归一化
+        float frameCenterNorm = 0.5f;  // 画面中心归一化坐标
+        // FOV 半径（归一化空间）：aim_range_size% 的一半
+        float fovRadiusNorm = cfg.aim_range_size / 100.0f * 0.5f;
+        const Detection* target = selector_.SelectBest(detections, frameCenterNorm, frameCenterNorm,
+                                                       cfg.target_class_ids, fovRadiusNorm);
 
-        // 5) 目标选择：在 FOV 范围内选距画面中心最近的敌人
-        float frameCX = static_cast<float>(cfg.capture_size) / 2.0f;
-        float frameCY = static_cast<float>(cfg.capture_size) / 2.0f;
-        // FOV 半径（模型输入空间）：aim_range_size% * 模型尺寸 / 2
-        float fovRadiusModel = (cfg.aim_range_size / 100.0f) * detector_.InputWidth() / 2.0f;
-        float frameCX_model = frameCX / sx;
-        float frameCY_model = frameCY / sy;
-        const Detection* target = selector_.SelectBest(detections, frameCX_model, frameCY_model,
-                                                       cfg.target_class_ids, fovRadiusModel);
-
-        // 6) 瞄准键按下 → 鼠标移动（坐标系转换 + 死区 + 平滑 + 灵敏度）
+        // 5) 瞄准键按下 → 鼠标移动（坐标系转换 + 死区 + 平滑 + 灵敏度）
         if (target && (GetAsyncKeyState(cfg.aim_key) & 0x8000)) {
-            // 目标坐标从模型空间缩放到截图空间
-            // X = 框水平中心；Y = 框顶部 + height * target_y_ratio（头部/胸部/腹部偏移）
-            float targetCX = target->center_x() * sx;
-            float targetCY = (target->y1 + target->height() * cfg.target_y_ratio) * sy;
+            // Detection 坐标是归一化 [0,1]，直接乘截图尺寸得到截图空间坐标
+            float targetCX = target->center_x() * cfg.capture_size;
+            float targetCY = (target->y1 + target->height() * cfg.target_y_ratio) * cfg.capture_size;
 
+            float frameCX = static_cast<float>(cfg.capture_size) / 2.0f;
+            float frameCY = static_cast<float>(cfg.capture_size) / 2.0f;
             double offsetX = targetCX - frameCX;
             double offsetY = targetCY - frameCY;
 
@@ -241,15 +236,14 @@ void AimEngine::RunLoop() {
             }
         }
 
-        // 7) 可视化：在帧上绘制检测框 + FOV圈（可选）
+        // 6) 可视化：在帧上绘制检测框 + FOV圈（可选）
         cv::Mat visFrame;
         if (cfg.enable_visualization) {
             visFrame = frame.clone();
 
             int capSize = cfg.capture_size;
-            int geoCX = static_cast<int>(frameCX);
+            int geoCX = capSize / 2;
             int geoCY = capSize / 2;
-            // sx, sy 已在步骤4计算（模型输入空间 → 截图空间）
 
             // ── 检测框（受 draw_detection_boxes 控制） ──
             if (cfg.draw_detection_boxes) {
@@ -271,13 +265,13 @@ void AimEngine::RunLoop() {
                         if (det.class_id == tcid) { isTargetClass = true; break; }
                     }
 
-                    // 判断是否在 FOV 内
+                    // 判断是否在 FOV 内（归一化空间 [0,1]）
                     float detCX = det.center_x();
                     float detCY = det.center_y();
                     float detDist = std::sqrt(
-                        (detCX - frameCX_model) * (detCX - frameCX_model) +
-                        (detCY - frameCY_model) * (detCY - frameCY_model));
-                    bool inFOV = (detDist <= fovRadiusModel);
+                        (detCX - frameCenterNorm) * (detCX - frameCenterNorm) +
+                        (detCY - frameCenterNorm) * (detCY - frameCenterNorm));
+                    bool inFOV = (detDist <= fovRadiusNorm);
 
                     // 判断是否是当前锁定的目标
                     bool isLockedTarget = (target != nullptr &&
@@ -354,10 +348,11 @@ void AimEngine::RunLoop() {
                 // 目标信息（第3行）
                 if (target) {
                     char tbuf[128];
-                    snprintf(tbuf, sizeof(tbuf), "TGT cls:%d cf:%.0f%% dist:%.0f",
-                        target->class_id, target->confidence * 100,
-                        std::sqrt((target->center_x() - frameCX_model) * (target->center_x() - frameCX_model)
-                                + (target->center_y() - frameCY_model) * (target->center_y() - frameCY_model)));
+                    float tgtDist = std::sqrt(
+                        (target->center_x() - frameCenterNorm) * (target->center_x() - frameCenterNorm)
+                      + (target->center_y() - frameCenterNorm) * (target->center_y() - frameCenterNorm));
+                    snprintf(tbuf, sizeof(tbuf), "TGT cls:%d cf:%.0f%% dist:%.3f",
+                        target->class_id, target->confidence * 100, tgtDist);
                     cv::putText(visFrame, std::string(tbuf), cv::Point(6, 52),
                                 cv::FONT_HERSHEY_SIMPLEX, 0.35, cv::Scalar(0, 215, 255), 1, cv::LINE_8);
                 } else {
@@ -417,7 +412,7 @@ void AimEngine::RunLoop() {
             }
         }
 
-        // 8) FPS 统计
+        // 7) FPS 统计
         frameCount++;
         auto now = std::chrono::steady_clock::now();
         double elapsed = std::chrono::duration<double>(now - lastTime).count();
@@ -427,7 +422,7 @@ void AimEngine::RunLoop() {
             lastTime = now;
         }
 
-        // 9) 退出键检测
+        // 8) 退出键检测
         if (GetAsyncKeyState(cfg.exit_key) & 0x8000) {
             std::cout << "[Engine] Exit key pressed, stopping..." << std::endl;
             running_.store(false);
