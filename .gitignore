@@ -1,0 +1,41 @@
+# Build outputs
+build/
+build_v2.0/
+*.exe
+*.dll
+*.lib
+*.obj
+*.exp
+*.ilk
+*.pdb
+*.log
+
+# Third-party SDKs (huge binary dependencies)
+NVIDIA GPU Computing Toolkit/
+TensorRT-10.16.1.11.Windows.amd64.cuda-13.2/
+onnxruntime/
+opencv/
+kmboxnet-main/
+TensorRT-YOLO-main/
+
+# CMake temp files
+CMakeFiles/
+cmake_config.txt
+cmake_log.txt
+
+# Models (binary, large)
+models/*.engine
+models/*.onnx
+
+# Build logs
+build_log.txt
+build_output.txt
+aqtinstall.log
+
+# Qt download temp
+"Starting Qt6 download (~120MB, may take a few minutes)/"
+
+# IDE
+.vs/
+.vscode/
+*.user

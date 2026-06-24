@@ -1,0 +1,181 @@
+/* ============================================================
+   style.qss — Chimera AI v2.0 MVP QSS
+   现代简约白色主题，蓝色 (#1890FF) 功能强调
+   ============================================================ */
+
+/* ── 全局 ── */
+QMainWindow {
+    background: #FFFFFF;
+}
+
+QWidget {
+    font-family: "Microsoft YaHei", "Segoe UI", sans-serif;
+    font-size: 14px;
+}
+
+/* ── 左侧导航栏 ── */
+#navBar {
+    background: #F5F5F5;
+    min-width: 200px;
+    max-width: 200px;
+}
+
+#navBrand {
+    font-size: 18px;
+    font-weight: bold;
+    color: #1890FF;
+    padding: 20px;
+}
+
+#navItem {
+    padding: 12px 20px;
+    color: #888888;
+    font-size: 14px;
+    text-align: left;
+    padding-left: 20px;
+    border-left: 3px solid transparent;
+    border-top: none;
+    border-right: none;
+    border-bottom: none;
+    background: transparent;
+}
+
+#navItem:hover {
+    background: #E8E8E8;
+    color: #333333;
+}
+
+#navItem[active="true"] {
+    color: #1890FF;
+    background: #E6F7FF;
+    border-left: 3px solid #1890FF;
+}
+
+/* ── 顶部信息栏 ── */
+#topInfoBar {
+    background: #FAFAFA;
+    border-bottom: 1px solid #E8E8E8;
+    padding: 8px 20px;
+}
+
+#topInfoBar QLabel {
+    font-size: 13px;
+    color: #666666;
+}
+
+/* ── 普通按钮（默认样式）── */
+QPushButton {
+    background: #FFFFFF;
+    border: 1px solid #D9D9D9;
+    border-radius: 4px;
+    padding: 6px 16px;
+    color: #333333;
+}
+
+QPushButton:hover {
+    border-color: #1890FF;
+    color: #1890FF;
+}
+
+/* ── 主按钮 (btnPrimary) ── */
+#btnPrimary {
+    background: #1890FF;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 24px;
+    font-size: 14px;
+    font-weight: bold;
+}
+
+#btnPrimary:hover {
+    background: #40A9FF;
+}
+
+#btnPrimary:pressed {
+    background: #096DD9;
+}
+
+/* ── 卡片 (QGroupBox) ── */
+QGroupBox {
+    background: #FFFFFF;
+    border: 1px solid #E8E8E8;
+    border-radius: 8px;
+    margin-top: 20px;
+    padding: 24px 20px 20px 20px;
+    font-size: 16px;
+    font-weight: bold;
+    color: #333333;
+}
+
+QGroupBox::title {
+    subcontrol-origin: margin;
+    left: 20px;
+    padding: 0 8px;
+}
+
+/* ── 拖拽区域 ── */
+#dragDropArea {
+    border: 2px dashed #D9D9D9;
+    border-radius: 8px;
+    background: #FAFAFA;
+}
+
+#dragDropArea[hover="true"] {
+    border-color: #1890FF;
+    border-style: solid;
+    background: #E6F7FF;
+}
+
+/* ── 滑块 ── */
+QSlider::groove:horizontal {
+    height: 6px;
+    background: #E8E8E8;
+    border-radius: 3px;
+    border: none;
+}
+
+QSlider::sub-page:horizontal {
+    background: #1890FF;
+    border-radius: 3px;
+}
+
+QSlider::handle:horizontal {
+    width: 16px;
+    height: 16px;
+    background: #FFFFFF;
+    border: 2px solid #1890FF;
+    border-radius: 8px;
+    margin: -6px 0;
+}
+
+QSlider::handle:horizontal:hover {
+    border-color: #40A9FF;
+}
+
+/* ── 状态标签 ── */
+#statusRunning { color: #52C41A; font-weight: bold; }
+#statusNoModel  { color: #888888; }
+#statusError    { color: #FF4D4F; font-weight: bold; }
+
+/* ── 滚动区域 ── */
+QScrollArea {
+    border: none;
+    background: #FFFFFF;
+}
+
+QScrollBar:vertical {
+    width: 8px;
+    background: transparent;
+}
+
+QScrollBar::handle:vertical {
+    background: #D9D9D9;
+    border-radius: 4px;
+    min-height: 30px;
+}
+
+QScrollBar::add-line:vertical,
+QScrollBar::sub-line:vertical {
+    height: 0px;
+}
