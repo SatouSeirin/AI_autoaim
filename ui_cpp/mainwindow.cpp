@@ -311,29 +311,32 @@ QWidget* MainWindow::createNavBar() {
     auto* cardWidget = new QWidget(navBar);
     cardWidget->setObjectName("sidebarCard");
     auto* cardLayout = new QVBoxLayout(cardWidget);
-    cardLayout->setContentsMargins(12, 12, 12, 12);
+    cardLayout->setContentsMargins(14, 14, 14, 14);
     cardLayout->setSpacing(6);
 
     auto* cardTitle = new QLabel("\u5361\u5bc6\u4fe1\u606f", cardWidget);
-    cardTitle->setStyleSheet("font-size: 12px; font-weight: 600; color: #FFFFFF;");
+    cardTitle->setStyleSheet("font-size: 12px; font-weight: 700; color: #FFFFFF; letter-spacing: 0.5px;");
     cardLayout->addWidget(cardTitle);
 
+    auto* expireIcon = new QLabel("\u2606", cardWidget);
+    expireIcon->setStyleSheet("font-size: 10px; color: rgba(255,255,255,0.5); margin-top: 4px;");
+    cardLayout->addWidget(expireIcon);
+
     auto* expireLabel = new QLabel("\u6709\u6548\u671f: 2027:12:31", cardWidget);
-    expireLabel->setStyleSheet("font-size: 11px; color: rgba(255,255,255,0.7);");
+    expireLabel->setStyleSheet("font-size: 11px; color: rgba(255,255,255,0.7); font-weight: 500;");
     cardLayout->addWidget(expireLabel);
 
     auto* remainLabel = new QLabel("\u5269\u4f59: 365 \u5929", cardWidget);
-    remainLabel->setStyleSheet("font-size: 11px; color: rgba(255,255,255,0.9);");
+    remainLabel->setStyleSheet("font-size: 11px; color: #93C5FD; font-weight: 600;");
     cardLayout->addWidget(remainLabel);
 
     auto* sep = new QFrame(cardWidget);
     sep->setFrameShape(QFrame::HLine);
-    sep->setStyleSheet("background: rgba(255,255,255,0.15); max-height: 1px;");
+    sep->setStyleSheet("background: rgba(255,255,255,0.12); max-height: 1px; margin: 4px 0;");
     cardLayout->addWidget(sep);
 
     fpsLabel_ = new QLabel("FPS: -- | \u63a8\u7406: -- ms", cardWidget);
-    fpsLabel_->setObjectName("cardFps");
-    fpsLabel_->setStyleSheet("font-size: 11px; color: rgba(255,255,255,0.8);");
+    fpsLabel_->setStyleSheet("font-size: 11px; color: rgba(255,255,255,0.75); font-weight: 500;");
     cardLayout->addWidget(fpsLabel_);
 
     navLayout->addWidget(cardWidget);
