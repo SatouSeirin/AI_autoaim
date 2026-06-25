@@ -62,6 +62,7 @@ private:
 
     QLabel* topSysStatus_   = nullptr;
     QLabel* topModelStatus_ = nullptr;
+    QLabel* topCardInfo_    = nullptr;
 
     QList<QPushButton*> navButtons_;
 };

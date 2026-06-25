@@ -245,6 +245,11 @@ void MainWindow::initUI() {
     topLayout->addWidget(topModelStatus_);
 
     topLayout->addStretch();
+
+    topCardInfo_ = new QLabel("\u5361\u5bc6: 2027:12:31 | \u5269\u4f59: 365\u5929", topBar);
+     topCardInfo_->setObjectName("topCardInfo");
+     topLayout->addWidget(topCardInfo_);
+
     rightLayout->addWidget(topBar);
 
     // QStackedWidget
