@@ -94,8 +94,8 @@ QComboBox::down-arrow{border-left:5px solid transparent;border-right:5px solid t
 
 /* ?? Sidebar glass card ?? */
 #sidebarCard {
-    background: rgba(59, 130, 246, 30);
-    border: 1px solid rgba(59, 130, 246, 60);
+    background: rgba(59, 130, 246, 80);
+    border: 1px solid rgba(59, 130, 246, 120);
     border-radius: 10px;
     margin: 8px 12px;
 }

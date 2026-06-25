@@ -307,6 +307,37 @@ QWidget* MainWindow::createNavBar() {
     versionLabel->setAlignment(Qt::AlignCenter);
     navLayout->addWidget(versionLabel);
 
+    // Sidebar glass card
+    auto* cardWidget = new QWidget(navBar);
+    cardWidget->setObjectName("sidebarCard");
+    auto* cardLayout = new QVBoxLayout(cardWidget);
+    cardLayout->setContentsMargins(12, 12, 12, 12);
+    cardLayout->setSpacing(6);
+
+    auto* cardTitle = new QLabel("\u5361\u5bc6\u4fe1\u606f", cardWidget);
+    cardTitle->setStyleSheet("font-size: 12px; font-weight: 600; color: #FFFFFF;");
+    cardLayout->addWidget(cardTitle);
+
+    auto* expireLabel = new QLabel("\u6709\u6548\u671f: 2027:12:31", cardWidget);
+    expireLabel->setStyleSheet("font-size: 11px; color: rgba(255,255,255,0.7);");
+    cardLayout->addWidget(expireLabel);
+
+    auto* remainLabel = new QLabel("\u5269\u4f59: 365 \u5929", cardWidget);
+    remainLabel->setStyleSheet("font-size: 11px; color: rgba(255,255,255,0.9);");
+    cardLayout->addWidget(remainLabel);
+
+    auto* sep = new QFrame(cardWidget);
+    sep->setFrameShape(QFrame::HLine);
+    sep->setStyleSheet("background: rgba(255,255,255,0.15); max-height: 1px;");
+    cardLayout->addWidget(sep);
+
+    fpsLabel_ = new QLabel("FPS: -- | \u63a8\u7406: -- ms", cardWidget);
+    fpsLabel_->setObjectName("cardFps");
+    fpsLabel_->setStyleSheet("font-size: 11px; color: rgba(255,255,255,0.8);");
+    cardLayout->addWidget(fpsLabel_);
+
+    navLayout->addWidget(cardWidget);
+
 #if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
     connect(navGroup_, &QButtonGroup::idClicked, this, &MainWindow::onNavChanged);
 #else
