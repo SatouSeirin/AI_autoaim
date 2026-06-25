@@ -1,4 +1,4 @@
-﻿/* ============================================================
+/* ============================================================
    Chimera AI v2.1 — Premium White Enterprise Theme
    Clean, airy, professional. Inspired by modern SaaS design.
    ============================================================ */
@@ -88,3 +88,6 @@ QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }
 
 /* ── Tooltip ── */
 QToolTip { background: #1E293B; color: #F1F5F9; border: none; border-radius: 6px; padding: 6px 12px; font-size: 12px; }
+
+QDoubleSpinBox::up-button,QDoubleSpinBox::down-button,QSpinBox::up-button,QSpinBox::down-button{width:0px;height:0px;}
+QComboBox::down-arrow{border-left:5px solid transparent;border-right:5px solid transparent;border-top:6px solid #94A3B8;margin-right:8px;}

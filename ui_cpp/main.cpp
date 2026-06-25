@@ -1,45 +1,62 @@
 #include <QApplication>
 #include <QCommandLineParser>
 #include <QDebug>
-
+#include <QDialog>
+#include <QVBoxLayout>
+#include <QLabel>
+#include <QLineEdit>
+#include <QPushButton>
 #include "mainwindow.h"
-
-// ============================================================
-// Chimera AI v2.1 — 纯 C++ Qt6 UI + TensorRT 推理
-//
-// 命令行参数:
-//   --model <path>      模型路径 (.onnx / .engine)
-//   --conf <threshold>  置信度阈值 (默认 0.5)
-//   --crop <size>       截取区域边长 (默认 640)
-//   --headless          纯命令行模式（不启动 UI）
-// ============================================================
 
 int main(int argc, char* argv[]) {
     QApplication app(argc, argv);
-    app.setApplicationName("Chimera AI");
+    app.setApplicationName("MiniSense");
     app.setApplicationVersion("2.1.0");
 
-    // 命令行解析
-    QCommandLineParser parser;
-    parser.setApplicationDescription("Chimera AI — Real-time AI aiming system");
-    parser.addHelpOption();
-    parser.addVersionOption();
+    // Login dialog
+    QDialog loginDlg;
+    loginDlg.setWindowTitle("MiniSense - Login");
+    loginDlg.setFixedSize(400, 320);
 
-    parser.addOptions({
-        {"model",   "模型路径 (.onnx/.engine)", "path"},
-        {"conf",    "置信度阈值 (0.0~1.0)",      "value"},
-        {"crop",    "截取区域边长 (px)",          "size"},
-        {"headless", "纯命令行模式（不启动 UI）"},
+    auto* layout = new QVBoxLayout(&loginDlg);
+    layout->setContentsMargins(40, 40, 40, 40);
+    layout->setSpacing(16);
+
+    auto* title = new QLabel("MiniSense");
+    title->setAlignment(Qt::AlignCenter);
+    title->setStyleSheet("font-size: 28px; font-weight: 700; color: #FFFFFF;");
+    layout->addWidget(title);
+
+    auto* pwdInput = new QLineEdit();
+    pwdInput->setPlaceholderText("Enter card key");
+    pwdInput->setEchoMode(QLineEdit::Password);
+    layout->addWidget(pwdInput);
+
+    auto* errLabel = new QLabel("");
+    errLabel->setStyleSheet("color: red;");
+    errLabel->setVisible(false);
+    layout->addWidget(errLabel);
+
+    auto* loginBtn = new QPushButton("Login");
+    loginBtn->setMinimumHeight(40);
+    layout->addWidget(loginBtn);
+
+    QObject::connect(loginBtn, &QPushButton::clicked, [&]() {
+        if (pwdInput->text() == "1") {
+            loginDlg.accept();
+        } else {
+            errLabel->setText("Wrong password");
+            errLabel->setVisible(true);
+        }
     });
 
-    if (!parser.parse(app.arguments())) {
-        qWarning() << parser.errorText();
-    }
+    if (loginDlg.exec() != QDialog::Accepted) return 0;
 
-    QString modelPath = parser.value("model");
+    QCommandLineParser parser;
+    parser.addOptions({{"model", "path"}, {"conf", "value"}, {"crop", "size"}, {"headless", ""}});
+    parser.process(app);
 
-    MainWindow window(modelPath);
+    MainWindow window(parser.value("model"));
     window.show();
-
     return app.exec();
 }

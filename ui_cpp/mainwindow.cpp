@@ -40,8 +40,9 @@ MainWindow::MainWindow(const QString& modelArg, QWidget* parent)
     // 全局热键
     setupHotkeys();
 
-    setWindowTitle("Chimera AI v2.1");
-    resize(1024, 720);
+    setWindowTitle("MiniSense v2.1");
+    setMinimumSize(900, 600);
+    resize(1100, 750);;
 }
 
 MainWindow::~MainWindow() {
@@ -282,7 +283,7 @@ QWidget* MainWindow::createNavBar() {
     navLayout->setContentsMargins(0, 0, 0, 0);
     navLayout->setSpacing(0);
 
-    auto* brandLabel = new QLabel("Chimera AI", navBar);
+    auto* brandLabel = new QLabel("MiniSense", navBar);
     brandLabel->setObjectName("navBrand");
     brandLabel->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
     navLayout->addWidget(brandLabel);
@@ -302,7 +303,7 @@ QWidget* MainWindow::createNavBar() {
     navLayout->addStretch();
 
     auto* versionLabel = new QLabel("v2.1", navBar);
-    versionLabel->setStyleSheet("font-size: 11px; color: #AAAAAA; padding: 10px 20px;");
+    // QSS styled
     versionLabel->setAlignment(Qt::AlignCenter);
     navLayout->addWidget(versionLabel);
 

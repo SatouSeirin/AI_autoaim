@@ -29,7 +29,6 @@ private slots:
 private:
     void setupMouseCurve(QGroupBox* group);
     void setupAimSettings(QGroupBox* group);
-    void setupHotkeys(QGroupBox* group);
 
     AimEngine* engine_ = nullptr;
 
@@ -47,6 +46,5 @@ private:
     QPushButton*  btnAbdomen_     = nullptr;
     int           activeBodyPart_ = 0;
 
-    QPushButton* hotkeyAim_    = nullptr;
-    QPushButton* hotkeySwitch_ = nullptr;
+
 };

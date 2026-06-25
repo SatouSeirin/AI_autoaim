@@ -19,11 +19,7 @@ AimPage::AimPage(QWidget* parent) : QWidget(parent) {
     setupAimSettings(aimGroup);
     mainLayout->addWidget(aimGroup);
 
-    auto* hotkeyGroup = new QGroupBox("热键绑定", this);
-    setupHotkeys(hotkeyGroup);
-    mainLayout->addWidget(hotkeyGroup);
-
-    mainLayout->addStretch();
+mainLayout->addStretch();
 }
 
 void AimPage::setEngine(AimEngine* engine) { engine_ = engine; }
@@ -110,38 +106,6 @@ void AimPage::setupAimSettings(QGroupBox* group) {
     hlayout->addWidget(bodyLabel);
 }
 
-void AimPage::setupHotkeys(QGroupBox* group) {
-    auto* layout = new QVBoxLayout(group);
-    auto* row1 = new QHBoxLayout();
-    auto* lbl1 = new QLabel("瞄准开关", group);
-    lbl1->setStyleSheet("font-size: 14px; color: #333333;");
-    hotkeyAim_ = new QPushButton("鼠标右键", group);
-    hotkeyAim_->setCursor(Qt::PointingHandCursor);
-    hotkeyAim_->setMinimumWidth(120);
-    hotkeyAim_->setStyleSheet(
-        "QPushButton { font-size: 13px; padding: 4px 12px; border: 1px solid #D9D9D9;"
-        " border-radius: 4px; background: #FFFFFF; color: #333333; }"
-        "QPushButton:hover { border-color: #1890FF; }");
-    row1->addWidget(lbl1);
-    row1->addStretch();
-    row1->addWidget(hotkeyAim_);
-    layout->addLayout(row1);
-
-    auto* row2 = new QHBoxLayout();
-    auto* lbl2 = new QLabel("切换目标", group);
-    lbl2->setStyleSheet("font-size: 14px; color: #333333;");
-    hotkeySwitch_ = new QPushButton("鼠标侧键1", group);
-    hotkeySwitch_->setCursor(Qt::PointingHandCursor);
-    hotkeySwitch_->setMinimumWidth(120);
-    hotkeySwitch_->setStyleSheet(
-        "QPushButton { font-size: 13px; padding: 4px 12px; border: 1px solid #D9D9D9;"
-        " border-radius: 4px; background: #FFFFFF; color: #333333; }"
-        "QPushButton:hover { border-color: #1890FF; }");
-    row2->addWidget(lbl2);
-    row2->addStretch();
-    row2->addWidget(hotkeySwitch_);
-    layout->addLayout(row2);
-}
 
 void AimPage::onKpChanged(double val) {
     if (!engine_) return;
