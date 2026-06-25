@@ -32,9 +32,7 @@ void HotkeyCapture::setVkCode(int vk) {
 }
 
 void HotkeyCapture::mousePressEvent(QMouseEvent* event) {
-    if (!listening_) {
-        enterCaptureMode();
-        // 捕获鼠标按键事件
+    if (listening_) {
         if (event->button() == Qt::LeftButton) {
             exitCaptureMode();
             setVkCode(VK_LBUTTON);
@@ -53,7 +51,7 @@ void HotkeyCapture::mousePressEvent(QMouseEvent* event) {
         }
         return;
     }
-    QPushButton::mousePressEvent(event);
+    enterCaptureMode();
 }
 
 void HotkeyCapture::keyPressEvent(QKeyEvent* event) {
@@ -130,13 +128,13 @@ void HotkeyCapture::enterCaptureMode() {
     setStyleSheet(captureStyle_);
     setFocus();
     grabKeyboard();
-    setMouseTracking(true);
+    grabMouse();
 }
 
 void HotkeyCapture::exitCaptureMode() {
     if (!listening_) return;
     listening_ = false;
     releaseKeyboard();
-    setMouseTracking(false);
+    releaseMouse();
     clearFocus();
 }

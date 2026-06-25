@@ -8,6 +8,8 @@
 #include <QGroupBox>
 
 #include "../widgets/hotkeycapture.h"
+#include "../../src/engine.hpp"
+#include "../../src/config_manager.hpp"
 
 // ============================================================
 // SettingsPage — v2.1 系统设置页
@@ -19,6 +21,7 @@ class SettingsPage : public QWidget {
 
 public:
     explicit SettingsPage(QWidget* parent = nullptr);
+    void syncFromConfig();
 
     // 获取/设置热键值（供 MainWindow 同步）
     int startStopKey() const;
@@ -31,6 +34,13 @@ public:
     void setSwitchKey(int vk);
 
 signals:
+    void saveProfileRequested(const QString& path);
+    void loadProfileRequested(const QString& path);
+
+public slots:
+    void setEngine(AimEngine* engine) { engine_ = engine; }
+    void onSaveProfile();
+    void onLoadProfile();
     void startStopKeyChanged(int vk);
     void aimKeyChanged(int vk);
     void exitKeyChanged(int vk);
@@ -39,6 +49,7 @@ signals:
 private:
     void setupGeneral(QGroupBox* group);
     void setupHotkeys(QGroupBox* group);
+    void setupProfiles(QGroupBox* group);
     void setupUpdate(QGroupBox* group);
     void setupAbout(QGroupBox* group);
 
@@ -51,4 +62,9 @@ private:
     HotkeyCapture* hkAim_          = nullptr;
     HotkeyCapture* hkExit_         = nullptr;
     HotkeyCapture* hkSwitch_       = nullptr;
+
+    QPushButton* btnSaveProfile_   = nullptr;
+    QPushButton* btnLoadProfile_   = nullptr;
+
+    AimEngine* engine_ = nullptr;
 };

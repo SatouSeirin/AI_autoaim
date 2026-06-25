@@ -161,6 +161,7 @@ void ModelPage::startAsyncLoad(const QString& path, bool isEngine) {
 }
 
 void ModelPage::onModelLoadFinished() {
+    syncSlidersFromConfig();
     loading_ = false;
     dragArea_->setEnabled(true);
 
@@ -198,6 +199,17 @@ void ModelPage::onModelLoadFinished() {
     emit modelLoaded(pendingModelPath_, true);
 }
 
+
+void ModelPage::syncSlidersFromConfig() {
+    if (!engine_) return;
+    auto cfg = engine_->GetConfig();
+    confSlider_->blockSignals(true);
+    confSlider_->setValue(cfg.confidence_threshold);
+    confSlider_->blockSignals(false);
+    nmsSlider_->blockSignals(true);
+    nmsSlider_->setValue(cfg.nms_threshold);
+    nmsSlider_->blockSignals(false);
+}
 void ModelPage::onStartStop() {
     if (!engine_ || !modelLoaded_) return;
 

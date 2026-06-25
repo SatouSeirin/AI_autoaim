@@ -1,6 +1,5 @@
 #include "aimpage.h"
 #include "../../src/engine.hpp"
-
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QGroupBox>
@@ -12,61 +11,51 @@ AimPage::AimPage(QWidget* parent) : QWidget(parent) {
     mainLayout->setContentsMargins(30, 20, 30, 20);
     mainLayout->setSpacing(24);
 
-    // ── 鼠标曲线输入方案 ──
-    auto* curveGroup = new QGroupBox("🖱 鼠标曲线输入方案", this);
+    auto* curveGroup = new QGroupBox("PID 控制", this);
     setupMouseCurve(curveGroup);
     mainLayout->addWidget(curveGroup);
 
-    // ── 瞄准设置 ──
-    auto* aimGroup = new QGroupBox("🎯 瞄准设置", this);
+    auto* aimGroup = new QGroupBox("瞄准设置", this);
     setupAimSettings(aimGroup);
     mainLayout->addWidget(aimGroup);
 
-    // ── 热键绑定 ──
-    auto* hotkeyGroup = new QGroupBox("⌨ 热键绑定", this);
+    auto* hotkeyGroup = new QGroupBox("热键绑定", this);
     setupHotkeys(hotkeyGroup);
     mainLayout->addWidget(hotkeyGroup);
 
     mainLayout->addStretch();
 }
 
-void AimPage::setEngine(AimEngine* engine) {
-    engine_ = engine;
-}
+void AimPage::setEngine(AimEngine* engine) { engine_ = engine; }
 
-// ── 鼠标曲线 ──
 void AimPage::setupMouseCurve(QGroupBox* group) {
     auto* layout = new QVBoxLayout(group);
 
-    kpSlider_ = new ParamSlider("PD 比例增益 (Kp)", 0.0, 1.0, 0.25, 3, "", group);
+    kpSlider_ = new ParamSlider("Kp", 0.001, 3.0, 0.25, 3, "", group);
     connect(kpSlider_, &ParamSlider::valueChanged, this, &AimPage::onKpChanged);
     layout->addWidget(kpSlider_);
 
-    kiSlider_ = new ParamSlider("PID 积分增益 (Ki)", 0.0, 0.01, 0.0008, 4, "", group);
+    kiSlider_ = new ParamSlider("Ki", 0.0, 0.05, 0.0, 3, "", group);
     connect(kiSlider_, &ParamSlider::valueChanged, this, &AimPage::onKiChanged);
     layout->addWidget(kiSlider_);
 
-    kalmanSlider_ = new ParamSlider("卡尔曼预测", 0, 200, 0, 0, " ms", group);
-    connect(kalmanSlider_, &ParamSlider::valueChanged, this, &AimPage::onKalmanChanged);
-    layout->addWidget(kalmanSlider_);
+    kdSlider_ = new ParamSlider("Kd", 0.001, 0.5, 0.08, 3, "", group);
+    connect(kdSlider_, &ParamSlider::valueChanged, this, &AimPage::onKdChanged);
+    layout->addWidget(kdSlider_);
 
-    delayCompSlider_ = new ParamSlider("延迟矫正补偿", 0, 50, 5, 0, " ms", group);
-    connect(delayCompSlider_, &ParamSlider::valueChanged, this, &AimPage::onDelayCompChanged);
-    layout->addWidget(delayCompSlider_);
+    predictStepsSlider_ = new ParamSlider("提前预测", 0, 20, 3, 0, " 帧", group);
+    connect(predictStepsSlider_, &ParamSlider::valueChanged, this, &AimPage::onPredictStepsChanged);
+    layout->addWidget(predictStepsSlider_);
 }
 
-// ── 瞄准设置（左侧参数 + 右侧人体示意图）──
 void AimPage::setupAimSettings(QGroupBox* group) {
     auto* hlayout = new QHBoxLayout(group);
-
-    // 左侧参数
     auto* leftLayout = new QVBoxLayout();
 
     rangeSizeSlider_ = new ParamSlider("范围大小", 1, 100, 21, 0, " %", group);
     connect(rangeSizeSlider_, &ParamSlider::valueChanged, this, &AimPage::onRangeSizeChanged);
     leftLayout->addWidget(rangeSizeSlider_);
 
-    // 范围布局
     auto* layoutLabel = new QLabel("范围布局", group);
     layoutLabel->setStyleSheet("font-size: 14px; color: #333333; margin-top: 8px;");
     leftLayout->addWidget(layoutLabel);
@@ -82,14 +71,13 @@ void AimPage::setupAimSettings(QGroupBox* group) {
     layoutRow->addStretch();
     leftLayout->addLayout(layoutRow);
 
-    // 对准部位
-    auto* partLabel = new QLabel("对准部位", group);
+    auto* partLabel = new QLabel("瞄准部位", group);
     partLabel->setStyleSheet("font-size: 14px; color: #333333; margin-top: 8px;");
     leftLayout->addWidget(partLabel);
     auto* partRow = new QHBoxLayout();
-    btnHead_    = new QPushButton("对准头部", group);
-    btnChest_   = new QPushButton("对准胸部", group);
-    btnAbdomen_ = new QPushButton("对准腹部", group);
+    btnHead_    = new QPushButton("头部", group);
+    btnChest_   = new QPushButton("胸部", group);
+    btnAbdomen_ = new QPushButton("腹部", group);
     for (auto* b : {btnHead_, btnChest_, btnAbdomen_}) {
         b->setCheckable(true);
         b->setCursor(Qt::PointingHandCursor);
@@ -108,20 +96,13 @@ void AimPage::setupAimSettings(QGroupBox* group) {
     connect(btnChest_,   &QPushButton::clicked, [this]() { onBodyPartClicked(1); });
     connect(btnAbdomen_, &QPushButton::clicked, [this]() { onBodyPartClicked(2); });
 
-    // PID 平滑
-    auto* smoothSlider = new ParamSlider("平滑系数", 0.1, 1.0, 1.0, 1, "", group);
-    connect(smoothSlider, &ParamSlider::valueChanged, this, &AimPage::onSmoothingChanged);
-    leftLayout->addWidget(smoothSlider);
+    sensitivitySlider_ = new ParamSlider("灵敏度", 0.01, 1.0, 0.15, 2, "", group);
+    connect(sensitivitySlider_, &ParamSlider::valueChanged, this, &AimPage::onSensitivityChanged);
+    leftLayout->addWidget(sensitivitySlider_);
 
     leftLayout->addStretch();
     hlayout->addLayout(leftLayout);
 
-    // 右侧人体示意图
-    auto* bodyWidget = new QWidget(group);
-    bodyWidget->setFixedWidth(120);
-    bodyWidget->setMinimumHeight(200);
-    connect(bodyWidget, &QWidget::destroyed, [](){});
-    // 使用 paintEvent 绘制
     auto* bodyLabel = new QLabel(group);
     bodyLabel->setFixedWidth(120);
     bodyLabel->setMinimumHeight(200);
@@ -129,12 +110,10 @@ void AimPage::setupAimSettings(QGroupBox* group) {
     hlayout->addWidget(bodyLabel);
 }
 
-// ── 热键 ──
 void AimPage::setupHotkeys(QGroupBox* group) {
     auto* layout = new QVBoxLayout(group);
-
     auto* row1 = new QHBoxLayout();
-    auto* lbl1 = new QLabel("自瞄开关", group);
+    auto* lbl1 = new QLabel("瞄准开关", group);
     lbl1->setStyleSheet("font-size: 14px; color: #333333;");
     hotkeyAim_ = new QPushButton("鼠标右键", group);
     hotkeyAim_->setCursor(Qt::PointingHandCursor);
@@ -164,42 +143,30 @@ void AimPage::setupHotkeys(QGroupBox* group) {
     layout->addLayout(row2);
 }
 
-// ── 槽函数 ──
 void AimPage::onKpChanged(double val) {
     if (!engine_) return;
-    auto cfg = engine_->GetConfig();
-    cfg.kp = val;
-    engine_->UpdateConfig(cfg);
+    auto cfg = engine_->GetConfig(); cfg.kp = val; engine_->UpdateConfig(cfg);
 }
-
 void AimPage::onKiChanged(double val) {
     if (!engine_) return;
-    auto cfg = engine_->GetConfig();
-    cfg.ki = val;
-    engine_->UpdateConfig(cfg);
+    auto cfg = engine_->GetConfig(); cfg.ki = val; engine_->UpdateConfig(cfg);
 }
-
-void AimPage::onKalmanChanged(double val) {
+void AimPage::onKdChanged(double val) {
     if (!engine_) return;
-    auto cfg = engine_->GetConfig();
-    cfg.kalman_ms = static_cast<int>(val);
-    engine_->UpdateConfig(cfg);
+    auto cfg = engine_->GetConfig(); cfg.kd = val; engine_->UpdateConfig(cfg);
 }
-
-void AimPage::onDelayCompChanged(double val) {
+void AimPage::onPredictStepsChanged(double val) {
     if (!engine_) return;
-    auto cfg = engine_->GetConfig();
-    cfg.delay_comp_ms = static_cast<int>(val);
-    engine_->UpdateConfig(cfg);
+    auto cfg = engine_->GetConfig(); cfg.kalman_prediction_steps = static_cast<int>(val); engine_->UpdateConfig(cfg);
 }
-
+void AimPage::onSensitivityChanged(double val) {
+    if (!engine_) return;
+    auto cfg = engine_->GetConfig(); cfg.sensitivity = val; engine_->UpdateConfig(cfg);
+}
 void AimPage::onRangeSizeChanged(double val) {
     if (!engine_) return;
-    auto cfg = engine_->GetConfig();
-    cfg.aim_range_size = static_cast<int>(val);
-    engine_->UpdateConfig(cfg);
+    auto cfg = engine_->GetConfig(); cfg.aim_range_size = static_cast<int>(val); engine_->UpdateConfig(cfg);
 }
-
 void AimPage::onBodyPartClicked(int part) {
     activeBodyPart_ = part;
     btnHead_->setChecked(part == 0);
@@ -211,14 +178,6 @@ void AimPage::onBodyPartClicked(int part) {
     cfg.target_y_ratio = (part == 0 ? 0.15f : part == 1 ? 0.35f : 0.55f);
     engine_->UpdateConfig(cfg);
 }
-
-void AimPage::onSmoothingChanged(double val) {
-    if (!engine_) return;
-    auto cfg = engine_->GetConfig();
-    cfg.aim_smoothing = val;
-    engine_->UpdateConfig(cfg);
-}
-
 void AimPage::onRangeLayoutChanged() {
     if (!engine_) return;
     auto cfg = engine_->GetConfig();

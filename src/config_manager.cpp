@@ -112,12 +112,8 @@ AimConfig ConfigManager::Load(const std::string& filepath) {
     cfg.target_body_part      = getInt(json, "target_body_part", 0);
     cfg.aim_range_size        = getInt(json, "aim_range_size", 21);
     cfg.aim_range_circle      = getBool(json, "aim_range_circle", true);
-    cfg.sensitivity           = getDouble(json, "sensitivity", 1.0);
-    cfg.aim_smoothing         = getDouble(json, "aim_smoothing", 1.0);
     cfg.kp                    = getDouble(json, "kp", 0.25);
     cfg.ki                    = getDouble(json, "ki", 0.0008);
-    cfg.kalman_ms             = getInt(json, "kalman_ms", 0);
-    cfg.delay_comp_ms         = getInt(json, "delay_comp_ms", 5);
     cfg.aim_key               = getInt(json, "aim_key", 0x02);
     cfg.exit_key              = getInt(json, "exit_key", 0x71);
     cfg.switch_target_key     = getInt(json, "switch_target_key", 0x06);
@@ -168,12 +164,8 @@ bool ConfigManager::Save(const AimConfig& cfg, const std::string& filepath) {
     f << "  \"target_body_part\": "        << cfg.target_body_part << ",\n";
     f << "  \"aim_range_size\": "          << cfg.aim_range_size << ",\n";
     f << "  \"aim_range_circle\": "        << (cfg.aim_range_circle ? "true" : "false") << ",\n";
-    f << "  \"sensitivity\": "             << cfg.sensitivity << ",\n";
-    f << "  \"aim_smoothing\": "           << cfg.aim_smoothing << ",\n";
     f << "  \"kp\": "                      << cfg.kp << ",\n";
     f << "  \"ki\": "                      << cfg.ki << ",\n";
-    f << "  \"kalman_ms\": "               << cfg.kalman_ms << ",\n";
-    f << "  \"delay_comp_ms\": "           << cfg.delay_comp_ms << ",\n";
     f << "  \"aim_key\": "                 << cfg.aim_key << ",\n";
     f << "  \"exit_key\": "                << cfg.exit_key << ",\n";
     f << "  \"switch_target_key\": "       << cfg.switch_target_key << ",\n";

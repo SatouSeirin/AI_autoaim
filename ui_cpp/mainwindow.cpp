@@ -32,6 +32,7 @@ MainWindow::MainWindow(const QString& modelArg, QWidget* parent)
     modelPage_->setEngine(engine_.get());
     previewPage_->setEngine(engine_.get());
     aimPage_->setEngine(engine_.get());
+    settingsPage_->setEngine(engine_.get());
 
     // 帧回调：推理线程 → UI 线程
     setupFrameCallback();
@@ -101,6 +102,16 @@ void MainWindow::setupHotkeys() {
             }
         }, Qt::QueuedConnection);
     });
+    // F2: exit key (global)
+    int exitId = 2;
+    hotkeyManager_->Register(exitId, MOD_NOREPEAT, cfg.exit_key, [this](int) {
+        QMetaObject::invokeMethod(this, [this]() {
+            if (engine_) {
+                std::cout << "[Hotkey] Exit key pressed, stopping engine..." << std::endl;
+                engine_->Stop();
+            }
+        }, Qt::QueuedConnection);
+    });
 
     // 从 SettingsPage 同步初始热键值
     auto* sp = settingsPage_;
@@ -113,22 +124,26 @@ void MainWindow::setupHotkeys() {
 
     // 热键变更 → 引擎
     connect(sp, &SettingsPage::startStopKeyChanged, this, [this](int vk) {
-        // 先注销旧热键
         hotkeyManager_->Unregister(1);
-        // 注册新热键
         hotkeyManager_->Register(1, MOD_NOREPEAT, vk, [this](int) {
             QMetaObject::invokeMethod(this, [this]() {
                 if (modelPage_) modelPage_->onStartStop();
             }, Qt::QueuedConnection);
         });
-        syncConfigFromUI();
     });
+
 
     connect(sp, &SettingsPage::aimKeyChanged, this, [this](int) {
         syncConfigFromUI();
     });
 
-    connect(sp, &SettingsPage::exitKeyChanged, this, [this](int) {
+    connect(sp, &SettingsPage::exitKeyChanged, this, [this](int vk) {
+        hotkeyManager_->Unregister(2);
+        hotkeyManager_->Register(2, MOD_NOREPEAT, vk, [this](int) {
+            QMetaObject::invokeMethod(this, [this]() {
+                if (engine_) engine_->Stop();
+            }, Qt::QueuedConnection);
+        });
         syncConfigFromUI();
     });
 

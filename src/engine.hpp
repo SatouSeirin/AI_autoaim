@@ -11,6 +11,8 @@
 #include "object_detector.hpp"
 #include "target_selector.hpp"
 #include "mouse_controller.hpp"
+#include "pid_controller.hpp"
+#include "kalman_tracker.hpp"
 
 // ============================================================
 // AimEngine — v2.0 MVP 主循环协调器
@@ -67,6 +69,10 @@ private:
     ObjectDetector  detector_;
     TargetSelector  selector_;
     MouseController mouse_;
+    // 自瞄算法组件
+    PIDController   pid_x_;
+    PIDController   pid_y_;
+    KalmanTracker   kalman_;
 
     // 配置
     AimConfig config_;
@@ -87,4 +93,9 @@ private:
     // 性能统计
     std::atomic<double> current_fps_{0.0};
     std::atomic<double> current_infer_ms_{0.0};
+
+    // 延迟补偿追踪
+    std::chrono::steady_clock::time_point last_target_time_;
+    std::chrono::steady_clock::time_point last_kalman_update_time_;
+
 };

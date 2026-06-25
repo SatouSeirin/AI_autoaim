@@ -46,6 +46,8 @@ set(ENGINE_SOURCES
     src/aim_engine.cpp
     src/config_manager.cpp
     src/hotkey_manager.cpp
+    src/pid_controller.cpp
+    src/kalman_tracker.cpp
 )
 
 set(ENGINE_HEADERS
@@ -57,6 +59,8 @@ set(ENGINE_HEADERS
     src/object_detector.hpp
     src/target_selector.hpp
     src/mouse_controller.hpp
+    src/pid_controller.hpp
+    src/kalman_tracker.hpp
 )
 
 add_library(aim_engine STATIC ${ENGINE_SOURCES} ${ENGINE_HEADERS})

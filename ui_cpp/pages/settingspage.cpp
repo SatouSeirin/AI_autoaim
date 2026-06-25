@@ -1,6 +1,7 @@
 #include "settingspage.h"
 
 #include <QVBoxLayout>
+#include <QFileDialog>
 #include <QHBoxLayout>
 #include <QGroupBox>
 #include <QLabel>
@@ -17,6 +18,11 @@ SettingsPage::SettingsPage(QWidget* parent) : QWidget(parent) {
     auto* hotkeyGroup = new QGroupBox("⌨ 热键绑定", this);
     setupHotkeys(hotkeyGroup);
     mainLayout->addWidget(hotkeyGroup);
+
+    // Config Profiles
+    auto* profileGroup = new QGroupBox("Config Profiles", this);
+    setupProfiles(profileGroup);
+    mainLayout->addWidget(profileGroup);
 
     // ── 通用设置 ──
     auto* generalGroup = new QGroupBox("⚙ 通用设置", this);
@@ -90,6 +96,28 @@ void SettingsPage::setupHotkeys(QGroupBox* group) {
     connect(hkSwitch_, &HotkeyCapture::keyChanged, this, &SettingsPage::switchKeyChanged);
 }
 
+void SettingsPage::setupProfiles(QGroupBox* group) {
+    auto* layout = new QVBoxLayout(group);
+    layout->setSpacing(10);
+    layout->setContentsMargins(16, 16, 16, 16);
+    auto* desc = new QLabel("Save or load configuration profiles (.json)", group);
+    desc->setStyleSheet("font-size: 13px; color: #888888;");
+    layout->addWidget(desc);
+    auto* btnRow = new QHBoxLayout();
+    btnSaveProfile_ = new QPushButton("Save Profile As...", group);
+    btnSaveProfile_->setCursor(Qt::PointingHandCursor);
+    btnSaveProfile_->setMinimumHeight(32);
+    connect(btnSaveProfile_, &QPushButton::clicked, this, &SettingsPage::onSaveProfile);
+    btnRow->addWidget(btnSaveProfile_);
+    btnLoadProfile_ = new QPushButton("Load Profile...", group);
+    btnLoadProfile_->setCursor(Qt::PointingHandCursor);
+    btnLoadProfile_->setMinimumHeight(32);
+    connect(btnLoadProfile_, &QPushButton::clicked, this, &SettingsPage::onLoadProfile);
+    btnRow->addWidget(btnLoadProfile_);
+    btnRow->addStretch();
+    layout->addLayout(btnRow);
+}
+
 void SettingsPage::setupGeneral(QGroupBox* group) {
     auto* layout = new QVBoxLayout(group);
 
@@ -161,6 +189,34 @@ void SettingsPage::setupAbout(QGroupBox* group) {
     layout->addWidget(desc);
 }
 
+
+void SettingsPage::syncFromConfig() {
+    if (!engine_) return;
+    auto cfg = engine_->GetConfig();
+    setStartStopKey(cfg.start_stop_key);
+    setAimKey(cfg.aim_key);
+    setExitKey(cfg.exit_key);
+    setSwitchKey(cfg.switch_target_key);
+}
+
+void SettingsPage::onSaveProfile() {
+    QString path = QFileDialog::getSaveFileName(this, "Save Profile", "profile.json", "Config Files (*.json)");
+    if (path.isEmpty()) return;
+    if (engine_) {
+        ConfigManager::Save(engine_->GetConfig(), path.toStdString());
+    }
+}
+
+void SettingsPage::onLoadProfile() {
+    QString path = QFileDialog::getOpenFileName(this, "Load Profile", "", "Config Files (*.json)");
+    if (path.isEmpty()) return;
+    if (engine_) {
+        AimConfig cfg = ConfigManager::Load(path.toStdString());
+        engine_->UpdateConfig(cfg);
+        emit loadProfileRequested(path);
+    }
+}
+
 // ── 热键值访问器 ──
 int SettingsPage::startStopKey() const { return hkStartStop_ ? hkStartStop_->vkCode() : VK_F5; }
 int SettingsPage::aimKey()       const { return hkAim_       ? hkAim_->vkCode()       : VK_RBUTTON; }
@@ -170,4 +226,23 @@ int SettingsPage::switchKey()    const { return hkSwitch_    ? hkSwitch_->vkCode
 void SettingsPage::setStartStopKey(int vk) { if (hkStartStop_) hkStartStop_->setVkCode(vk); }
 void SettingsPage::setAimKey(int vk)       { if (hkAim_)       hkAim_->setVkCode(vk); }
 void SettingsPage::setExitKey(int vk)      { if (hkExit_)      hkExit_->setVkCode(vk); }
+
+// Manual signal implementations (Qt6 MOC workaround)
+void SettingsPage::startStopKeyChanged(int vk) {
+    void* _a[] = { nullptr, const_cast<void*>(reinterpret_cast<const void*>(&vk)) };
+    QMetaObject::activate(this, &staticMetaObject, 2, _a);
+}
+void SettingsPage::aimKeyChanged(int vk) {
+    void* _a[] = { nullptr, const_cast<void*>(reinterpret_cast<const void*>(&vk)) };
+    QMetaObject::activate(this, &staticMetaObject, 3, _a);
+}
+void SettingsPage::exitKeyChanged(int vk) {
+    void* _a[] = { nullptr, const_cast<void*>(reinterpret_cast<const void*>(&vk)) };
+    QMetaObject::activate(this, &staticMetaObject, 4, _a);
+}
+void SettingsPage::switchKeyChanged(int vk) {
+    void* _a[] = { nullptr, const_cast<void*>(reinterpret_cast<const void*>(&vk)) };
+    QMetaObject::activate(this, &staticMetaObject, 5, _a);
+}
+
 void SettingsPage::setSwitchKey(int vk)    { if (hkSwitch_)    hkSwitch_->setVkCode(vk); }

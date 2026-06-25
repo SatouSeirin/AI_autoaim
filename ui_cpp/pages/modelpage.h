@@ -21,6 +21,7 @@ class ModelPage : public QWidget {
 public:
     explicit ModelPage(QWidget* parent = nullptr);
     void setEngine(AimEngine* engine);
+    void syncSlidersFromConfig();
     void refreshClassCheckboxes();  // 模型加载后刷新类别勾选
 
 signals:
