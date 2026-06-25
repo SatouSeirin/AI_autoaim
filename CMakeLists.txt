@@ -192,3 +192,130 @@ if(Qt6_FOUND)
 else()
     message(WARNING "Qt6 not found — UI executable will NOT be built. Only aim_engine.lib will be compiled.")
 endif()
+
+# ============================================================
+# ====== QML UI 可执行文件 (v2.1 QML 深色主题) ======
+# ============================================================
+find_package(Qt6 QUIET COMPONENTS Quick QuickControls2 Qml Svg)
+if(Qt6_FOUND AND Qt6Quick_FOUND)
+    message(STATUS "Qt6 Quick found, building auto_aim_qml.exe (QML UI)")
+
+    set(QML_UI_SOURCES
+        ui_qml/cpp/main.cpp
+        ui_qml/cpp/engineviewmodel.cpp
+        ui_qml/cpp/configviewmodel.cpp
+        ui_qml/cpp/frameprovider.cpp
+        ui_qml/cpp/logindialogcontroller.cpp
+    )
+
+    set(QML_UI_HEADERS
+        ui_qml/cpp/engineviewmodel.h
+        ui_qml/cpp/configviewmodel.h
+        ui_qml/cpp/frameprovider.h
+        ui_qml/cpp/logindialogcontroller.h
+        ui_qml/cpp/hotkeycapturedispatcher.h
+    )
+
+    qt_add_resources(QML_UI_RESOURCES ui_qml/qml_resources.qrc)
+
+    add_executable(auto_aim_qml WIN32 ${QML_UI_SOURCES} ${QML_UI_HEADERS} ${QML_UI_RESOURCES})
+    target_include_directories(auto_aim_qml PRIVATE
+        ${CMAKE_SOURCE_DIR}/ui_qml/cpp
+        ${CMAKE_SOURCE_DIR}
+    )
+    target_compile_definitions(auto_aim_qml PRIVATE NOMINMAX)
+    target_compile_options(auto_aim_qml PRIVATE /utf-8)
+    target_link_libraries(auto_aim_qml PRIVATE
+        Qt6::Core
+        Qt6::Gui
+        Qt6::Widgets
+        Qt6::Quick
+        Qt6::QuickControls2
+        Qt6::Qml
+        Qt6::Svg
+        aim_engine
+    )
+
+    # 将运行时 DLL 复制到输出目录
+    add_custom_command(TARGET auto_aim_qml POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            ${OPENCV_ROOT}/x64/vc16/bin/opencv_world4110.dll
+            $<TARGET_FILE_DIR:auto_aim_qml>
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            ${ONNXRUNTIME_ROOT}/lib/onnxruntime.dll
+            $<TARGET_FILE_DIR:auto_aim_qml>
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            ${CMAKE_SOURCE_DIR}/IbInputSimulator.dll
+            $<TARGET_FILE_DIR:auto_aim_qml>
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            ${TRT_ROOT}/bin/nvinfer_10.dll
+            $<TARGET_FILE_DIR:auto_aim_qml>
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            ${TRT_ROOT}/bin/nvonnxparser_10.dll
+            $<TARGET_FILE_DIR:auto_aim_qml>
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            ${TRT_ROOT}/bin/nvinfer_dispatch_10.dll
+            $<TARGET_FILE_DIR:auto_aim_qml>
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            ${TRT_ROOT}/bin/nvinfer_builder_resource_ptx_10.dll
+            $<TARGET_FILE_DIR:auto_aim_qml>
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            ${TRT_ROOT}/bin/nvinfer_builder_resource_sm75_10.dll
+            $<TARGET_FILE_DIR:auto_aim_qml>
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            ${TRT_ROOT}/bin/nvinfer_builder_resource_sm80_10.dll
+            $<TARGET_FILE_DIR:auto_aim_qml>
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            ${TRT_ROOT}/bin/nvinfer_builder_resource_sm86_10.dll
+            $<TARGET_FILE_DIR:auto_aim_qml>
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            ${TRT_ROOT}/bin/nvinfer_builder_resource_sm89_10.dll
+            $<TARGET_FILE_DIR:auto_aim_qml>
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            ${TRT_ROOT}/bin/nvinfer_builder_resource_sm90_10.dll
+            $<TARGET_FILE_DIR:auto_aim_qml>
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            ${TRT_ROOT}/bin/nvinfer_builder_resource_sm100_10.dll
+            $<TARGET_FILE_DIR:auto_aim_qml>
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            ${TRT_ROOT}/bin/nvinfer_builder_resource_sm120_10.dll
+            $<TARGET_FILE_DIR:auto_aim_qml>
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            ${CUDA_ROOT}/bin/x64/cudart64_13.dll
+            $<TARGET_FILE_DIR:auto_aim_qml>
+        # Qt Quick Controls 风格 DLL（windeployqt 遗漏）
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            C:/Qt/6.8.2/6.8.2/msvc2022_64/bin/Qt6QuickControls2Fusion.dll
+            $<TARGET_FILE_DIR:auto_aim_qml>
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            C:/Qt/6.8.2/6.8.2/msvc2022_64/bin/Qt6QuickControls2FusionStyleImpl.dll
+            $<TARGET_FILE_DIR:auto_aim_qml>
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            C:/Qt/6.8.2/6.8.2/msvc2022_64/bin/Qt6QuickControls2Basic.dll
+            $<TARGET_FILE_DIR:auto_aim_qml>
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            C:/Qt/6.8.2/6.8.2/msvc2022_64/bin/Qt6QuickControls2BasicStyleImpl.dll
+            $<TARGET_FILE_DIR:auto_aim_qml>
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            C:/Qt/6.8.2/6.8.2/msvc2022_64/bin/Qt6QuickControls2Impl.dll
+            $<TARGET_FILE_DIR:auto_aim_qml>
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            C:/Qt/6.8.2/6.8.2/msvc2022_64/bin/Qt6QuickLayouts.dll
+            $<TARGET_FILE_DIR:auto_aim_qml>
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            C:/Qt/6.8.2/6.8.2/msvc2022_64/bin/Qt6QuickDialogs2.dll
+            $<TARGET_FILE_DIR:auto_aim_qml>
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            C:/Qt/6.8.2/6.8.2/msvc2022_64/bin/Qt6QuickDialogs2QuickImpl.dll
+            $<TARGET_FILE_DIR:auto_aim_qml>
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            C:/Qt/6.8.2/6.8.2/msvc2022_64/bin/Qt6QuickDialogs2Utils.dll
+            $<TARGET_FILE_DIR:auto_aim_qml>
+        # 使用 windeployqt 自动部署 Qt6 依赖
+        COMMAND C:/Qt/6.8.2/6.8.2/msvc2022_64/bin/windeployqt.exe
+            --no-translations --no-compiler-runtime
+            $<TARGET_FILE:auto_aim_qml>
+    )
+else()
+    message(WARNING "Qt6 Quick not found — QML UI executable will NOT be built.")
+endif()

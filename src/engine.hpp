@@ -61,6 +61,12 @@ public:
     // ── 画面预览帧（线程安全）──
     cv::Mat GetLastFrame();
 
+    // ── 检测结果（线程安全，供 QML Canvas 绘制）──
+    std::vector<Detection> GetLastDetections() const;
+
+    // ── 测试鼠标移动（供 UI 测试按钮调用）──
+    void MoveMouseRelative(double dx, double dy);
+
 private:
     void RunLoop();       // 推理线程主循环
 
@@ -89,6 +95,10 @@ private:
     // 最新帧（供 UI 读取）
     cv::Mat last_frame_;
     std::mutex frame_mutex_;
+
+    // 最新检测结果（供 QML Canvas 绘制检测框）
+    std::vector<Detection> last_detections_;
+    mutable std::mutex detections_mutex_;
 
     // 性能统计
     std::atomic<double> current_fps_{0.0};

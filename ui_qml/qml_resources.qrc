@@ -1,0 +1,29 @@
+<RCC>
+    <qresource prefix="/">
+        <!-- QML files -->
+        <file>qml/main.qml</file>
+        <file>qml/theme/Theme.qml</file>
+        <file>qml/theme/qmldir</file>
+
+        <!-- Components -->
+        <file>qml/components/Sidebar.qml</file>
+        <file>qml/components/SidebarButton.qml</file>
+        <file>qml/components/CardBackground.qml</file>
+        <file>qml/components/SectionHeader.qml</file>
+        <file>qml/components/ButtonStyled.qml</file>
+        <file>qml/components/ToggleSwitch.qml</file>
+        <file>qml/components/ComboBoxStyled.qml</file>
+        <file>qml/components/ParamSlider.qml</file>
+        <file>qml/components/DragDropArea.qml</file>
+        <file>qml/components/HotkeyCapture.qml</file>
+        <file>qml/components/StatusIndicator.qml</file>
+        <file>qml/components/PreviewWindow.qml</file>
+        <file>qml/components/TargetSelector.qml</file>
+
+        <!-- Pages -->
+        <file>qml/pages/ModelPage.qml</file>
+        <file>qml/pages/PreviewPage.qml</file>
+        <file>qml/pages/AimPage.qml</file>
+        <file>qml/pages/SettingsPage.qml</file>
+    </qresource>
+</RCC>

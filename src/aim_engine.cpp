@@ -192,6 +192,21 @@ cv::Mat AimEngine::GetLastFrame() {
 }
 
 // ============================================================
+// 获取最新检测结果（线程安全）
+// ============================================================
+std::vector<Detection> AimEngine::GetLastDetections() const {
+    std::lock_guard<std::mutex> lock(detections_mutex_);
+    return last_detections_;
+}
+
+// ============================================================
+// 测试鼠标移动（供 UI 测试按钮调用）
+// ============================================================
+void AimEngine::MoveMouseRelative(double dx, double dy) {
+    mouse_.MoveMouse(dx, dy, 1.0);
+}
+
+// ============================================================
 // 推理主循环（运行在独立 std::thread）
 // ============================================================
 void AimEngine::RunLoop() {
@@ -225,6 +240,12 @@ void AimEngine::RunLoop() {
         auto inferEnd     = std::chrono::steady_clock::now();
         double inferMs    = std::chrono::duration<double, std::milli>(inferEnd - inferStart).count();
         current_infer_ms_.store(inferMs);
+
+        // 存储检测结果供 QML Canvas 绘制
+        {
+            std::lock_guard<std::mutex> lock(detections_mutex_);
+            last_detections_ = detections;
+        }
 
         // 4) 目标选择：在 FOV 范围内选距画面中心最近的敌人
         // Detection 坐标已归一化到 [0,1]，所以 frameCenter 和 fovRadius 也需归一化
@@ -310,180 +331,19 @@ void AimEngine::RunLoop() {
             } else {
                 prevTargetValid = false;
             }
-        }        // 6) 可视化：在帧上绘制检测框 + FOV圈（可选）
-        cv::Mat visFrame;
-        if (cfg.enable_visualization) {
-            visFrame = frame.clone();
+        }        // 6) 保存帧并通知 UI（所有叠加绘制由 QML 负责）
+        {
+            std::lock_guard<std::mutex> lock(frame_mutex_);
+            last_frame_ = frame.clone();
+        }
 
-            int capSize = cfg.capture_size;
-            int geoCX = capSize / 2;
-            int geoCY = capSize / 2;
-
-            // ── 检测框（受 draw_detection_boxes 控制） ──
-            if (cfg.draw_detection_boxes) {
-                static int drawDiagCount = 0;
-                // 最多绘制 20 个框，避免性能问题
-                const int maxDrawBoxes = 20;
-                int drawnCount = 0;
-                for (const auto& det : detections) {
-                    if (drawnCount >= maxDrawBoxes) break;
-
-                    // det.x1/y1/x2/y2 是归一化到 [0,1] 的坐标
-                    int dx1 = static_cast<int>(det.x1 * capSize);
-                    int dy1 = static_cast<int>(det.y1 * capSize);
-                    int dx2 = static_cast<int>(det.x2 * capSize);
-                    int dy2 = static_cast<int>(det.y2 * capSize);
-
-                    bool isTargetClass = false;
-                    for (int tcid : cfg.target_class_ids) {
-                        if (det.class_id == tcid) { isTargetClass = true; break; }
-                    }
-
-                    // 判断是否在 FOV 内（归一化空间 [0,1]）
-                    float detCX = det.center_x();
-                    float detCY = det.center_y();
-                    float detDist = std::sqrt(
-                        (detCX - frameCenterNorm) * (detCX - frameCenterNorm) +
-                        (detCY - frameCenterNorm) * (detCY - frameCenterNorm));
-                    bool inFOV = (detDist <= fovRadiusNorm);
-
-                    // 判断是否是当前锁定的目标
-                    bool isLockedTarget = (target != nullptr &&
-                        det.class_id == target->class_id &&
-                        std::abs(det.x1 - target->x1) < 0.001f &&
-                        std::abs(det.y1 - target->y1) < 0.001f);
-
-                    // 颜色规则：
-                    //   - 锁定目标（最近 + FOV内）：金黄色粗框
-                    //   - 目标类 + FOV内：绿色
-                    //   - 目标类 + FOV外：暗绿色
-                    //   - 非目标类：红色
-                    cv::Scalar color;
-                    int thickness = 2;
-                    if (isLockedTarget) {
-                        color = cv::Scalar(0, 215, 255);  // 金黄色 (BGR)
-                        thickness = 3;
-                    } else if (isTargetClass && inFOV) {
-                        color = cv::Scalar(0, 255, 0);    // 亮绿色
-                    } else if (isTargetClass && !inFOV) {
-                        color = cv::Scalar(0, 128, 0);    // 暗绿色
-                    } else {
-                        color = cv::Scalar(0, 0, 255);    // 红色
-                    }
-
-                    cv::rectangle(visFrame, cv::Point(dx1, dy1), cv::Point(dx2, dy2),
-                                  color, thickness);
-
-                    // 锁定目标额外绘制瞄准线
-                    if (isLockedTarget) {
-                        // 瞄准点（body part 偏移位置）
-                        int aimPX = static_cast<int>(
-                            (det.x1 + det.width() * 0.5f) * capSize);
-                        int aimPY = static_cast<int>(
-                            (det.y1 + det.height() * cfg.target_y_ratio) * capSize);
-                        cv::line(visFrame, cv::Point(geoCX, geoCY),
-                                 cv::Point(aimPX, aimPY),
-                                 cv::Scalar(0, 215, 255), 1, cv::LINE_AA);
-                        cv::circle(visFrame, cv::Point(aimPX, aimPY), 4,
-                                   cv::Scalar(0, 215, 255), -1, cv::LINE_AA);
-
-                        // 锁定标签
-                        std::string lockLabel = "LOCK cls:" + std::to_string(det.class_id)
-                            + " cf:" + std::to_string(static_cast<int>(det.confidence * 100)) + "%"
-                            + " d:" + std::to_string(static_cast<int>(detDist));
-                        cv::putText(visFrame, lockLabel,
-                            cv::Point(dx1, dy1 - 10),
-                            cv::FONT_HERSHEY_SIMPLEX, 0.40,
-                            cv::Scalar(0, 215, 255), 1, cv::LINE_AA);
-                    }
-
-                    drawnCount++;
-                }
-                drawDiagCount++;
-
-                // 检测数调试文字（左上角）
-                std::string detInfo = "dets:" + std::to_string(detections.size())
-                                    + " fps:" + std::to_string(static_cast<int>(current_fps_.load()))
-                                    + " fov:" + std::to_string(cfg.aim_range_size) + "%"
-                                    + " sens:" + std::to_string(1.0).substr(0, 4)
-                                    + " smooth:" + std::to_string(1.0).substr(0, 4);
-                cv::putText(visFrame, detInfo, cv::Point(6, 18),
-                            cv::FONT_HERSHEY_SIMPLEX, 0.40, cv::Scalar(0, 255, 0), 1, cv::LINE_8);
-
-                // 模型输出格式信息（第2行）
-                std::string fmtInfo = "fmt:" + std::to_string(detector_.InputWidth()) + "x"
-                                    + std::to_string(detector_.InputHeight())
-                                    + " nc:" + std::to_string(detector_.NumClasses())
-                                    + " nb:" + std::to_string(detector_.NumBoxes())
-                                    + (detector_.IsTransposed() ? " T" : " N");
-                cv::putText(visFrame, fmtInfo, cv::Point(6, 34),
-                            cv::FONT_HERSHEY_SIMPLEX, 0.35, cv::Scalar(255, 255, 0), 1, cv::LINE_8);
-
-                // 目标信息（第3行）
-                if (target) {
-                    char tbuf[128];
-                    float tgtDist = std::sqrt(
-                        (target->center_x() - frameCenterNorm) * (target->center_x() - frameCenterNorm)
-                      + (target->center_y() - frameCenterNorm) * (target->center_y() - frameCenterNorm));
-                    snprintf(tbuf, sizeof(tbuf), "TGT cls:%d cf:%.0f%% dist:%.3f",
-                        target->class_id, target->confidence * 100, tgtDist);
-                    cv::putText(visFrame, std::string(tbuf), cv::Point(6, 52),
-                                cv::FONT_HERSHEY_SIMPLEX, 0.35, cv::Scalar(0, 215, 255), 1, cv::LINE_8);
-                } else {
-                    cv::putText(visFrame, "TGT: none", cv::Point(6, 52),
-                                cv::FONT_HERSHEY_SIMPLEX, 0.35, cv::Scalar(128, 128, 128), 1, cv::LINE_8);
-                }
-            }
-
-            // ── 几何中心十字准星（白色，始终在画面正中心） ──
-            int crossLen = 16;
-            cv::line(visFrame, cv::Point(geoCX - crossLen, geoCY),
-                     cv::Point(geoCX + crossLen, geoCY),
-                     cv::Scalar(255, 255, 255), 1, cv::LINE_8);
-            cv::line(visFrame, cv::Point(geoCX, geoCY - crossLen),
-                     cv::Point(geoCX, geoCY + crossLen),
-                     cv::Scalar(255, 255, 255), 1, cv::LINE_8);
-
-            // ── FOV 瞄准范围（白色细线，以几何中心为圆心） ──
-            int fovR = static_cast<int>((cfg.aim_range_size / 100.0f) * capSize / 2.0f);
-            if (fovR < 20) fovR = 20;
-
-            if (cfg.aim_range_circle) {
-                cv::circle(visFrame, cv::Point(geoCX, geoCY), fovR,
-                           cv::Scalar(255, 255, 255), 1, cv::LINE_8);
-            } else {
-                cv::rectangle(visFrame,
-                    cv::Point(geoCX - fovR, geoCY - fovR),
-                    cv::Point(geoCX + fovR, geoCY + fovR),
-                    cv::Scalar(255, 255, 255), 1, cv::LINE_8);
-            }
-
-            // ── 边框调试指示器：紫色 = 可视化激活 ──
-            cv::rectangle(visFrame, cv::Point(2, 2),
-                          cv::Point(capSize - 3, capSize - 3),
-                          cv::Scalar(255, 0, 255), 2, cv::LINE_8);
-
-            // 保存最新帧
-            {
-                std::lock_guard<std::mutex> lock(frame_mutex_);
-                last_frame_ = visFrame.clone();
-            }
-
-            // 帧回调（通知 UI）
-            FrameCallback cb;
-            {
-                std::lock_guard<std::mutex> lock(callback_mutex_);
-                cb = frame_callback_;
-            }
-            if (cb) {
-                cb(visFrame);
-            }
-        } else {
-            // 不可视化时仍然保存最后一帧
-            {
-                std::lock_guard<std::mutex> lock(frame_mutex_);
-                last_frame_ = frame.clone();
-            }
+        FrameCallback cb;
+        {
+            std::lock_guard<std::mutex> lock(callback_mutex_);
+            cb = frame_callback_;
+        }
+        if (cb) {
+            cb(frame);
         }
 
         // 7) FPS 统计
