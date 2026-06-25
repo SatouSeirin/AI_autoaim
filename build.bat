@@ -1,70 +1,50 @@
 @echo off
-REM ============================================================
-REM build.bat — AutoAim v2.0 MVP 构建脚本
-REM ============================================================
-setlocal enabledelayedexpansion
+chcp 65001 >nul
+title MiniSense Build
 
-echo ========================================
-echo  AutoAim v2.0 MVP Build Script
-echo ========================================
+echo ========== MiniSense ???? ==========
 echo.
 
-REM ---- 检测 Qt6 ----
-set QT6_DIR=
-if exist "C:\Qt\6.8.0\msvc2022_64\lib\cmake\Qt6" (
-    set QT6_DIR=C:\Qt\6.8.0\msvc2022_64\lib\cmake\Qt6
-) else if exist "C:\Qt\6.7.0\msvc2022_64\lib\cmake\Qt6" (
-    set QT6_DIR=C:\Qt\6.7.0\msvc2022_64\lib\cmake\Qt6
-) else if exist "C:\Qt\6.5.0\msvc2019_64\lib\cmake\Qt6" (
-    set QT6_DIR=C:\Qt\6.5.0\msvc2019_64\lib\cmake\Qt6
+:: 1. ????
+echo [1/4] ?????...
+taskkill /f /im auto_aim_ui.exe >nul 2>&1
+del /f build\Release\auto_aim_ui.exe >nul 2>&1
+
+:: 2. VS ??
+echo [2/4] ?? VS 2026 ??...
+call "C:\Program Files\Microsoft Visual Studio\18\Community\Common7\Tools\VsDevCmd.bat" >nul 2>&1
+if %errorlevel% neq 0 (
+    echo ??: ??? VS 2026!
+    pause
+    exit /b 1
 )
 
-if not "%QT6_DIR%"=="" (
-    echo [OK] Qt6 found: %QT6_DIR%
-    echo        Building with UI...
-    set CMAKE_QT6=-DCMAKE_PREFIX_PATH="%QT6_DIR%"
+:: 3. CMake ??
+echo [3/4] ?? CMake...
+cmake -S . -B build -DCMAKE_PREFIX_PATH=C:/Qt/6.8.2/6.8.2/msvc2022_64 >nul 2>&1
+if %errorlevel% neq 0 (
+    echo ????????? build ??...
+    rmdir /s /q build >nul 2>&1
+    cmake -S . -B build -DCMAKE_PREFIX_PATH=C:/Qt/6.8.2/6.8.2/msvc2022_64
+    if %errorlevel% neq 0 (
+        echo CMake ???????? Qt ??
+        pause
+        exit /b 1
+    )
+)
+
+:: 4. ??
+echo [4/4] ???...
+cmake --build build --config Release
+set BUILD_RESULT=%errorlevel%
+echo.
+if %BUILD_RESULT% equ 0 (
+    echo ======== ?????========
+    echo ??: %cd%\build\Release\auto_aim_ui.exe
+    echo.
+    echo ????: build\Release\auto_aim_ui.exe
 ) else (
-    echo [WARN] Qt6 not found.
-    echo        Building only aim_engine.lib (no UI executable).
-    echo        To build with UI, set QT6_DIR in this script or install Qt6.
-    set CMAKE_QT6=
+    echo ======== ???? ========
 )
-
 echo.
-
-REM ---- 检测 VS 环境 ----
-where cmake >nul 2>&1
-if %ERRORLEVEL% neq 0 (
-    echo [ERROR] cmake not found. Please run from Visual Studio Developer Command Prompt.
-    echo         Or install CMake and add it to PATH.
-    pause
-    exit /b 1
-)
-
-REM ---- 配置 ----
-set BUILD_DIR=build_v2.0
-
-echo [1/2] Configuring...
-cmake -B %BUILD_DIR% -DCMAKE_BUILD_TYPE=Release %CMAKE_QT6%
-if %ERRORLEVEL% neq 0 (
-    echo [ERROR] CMake configure failed.
-    pause
-    exit /b 1
-)
-
-echo.
-echo [2/2] Building...
-cmake --build %BUILD_DIR% --config Release -j 8
-if %ERRORLEVEL% neq 0 (
-    echo [ERROR] Build failed.
-    pause
-    exit /b 1
-)
-
-echo.
-echo ========================================
-echo  Build succeeded!
-echo  Output: %BUILD_DIR%\Release\
-echo ========================================
-
-endlocal
+pause

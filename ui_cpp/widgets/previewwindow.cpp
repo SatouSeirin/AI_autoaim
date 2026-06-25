@@ -3,6 +3,7 @@
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QPixmap>
+#include <QStyle>
 #include <QFrame>
 #include <QLabel>
 
@@ -39,7 +40,10 @@ void PreviewWindow::setupUI() {
 
     topLayout->addStretch();
 
-    chkAlwaysOnTop_ = new QCheckBox(QString::fromUtf8("\xe7\xbd\xae\xe9\xa1\xb6"), topBar);
+    chkAlwaysOnTop_ = new QCheckBox(QString::fromUtf8("ç½®é¡¶"), topBar);
+    chkAlwaysOnTop_->setProperty("toggle", true);
+    chkAlwaysOnTop_->style()->unpolish(chkAlwaysOnTop_);
+    chkAlwaysOnTop_->style()->polish(chkAlwaysOnTop_);(QString::fromUtf8("\xe7\xbd\xae\xe9\xa1\xb6"), topBar);
     chkAlwaysOnTop_->setStyleSheet("QCheckBox { color: #CCC; font-size: 12px; }"
                                     "QCheckBox::indicator { width: 30px; height: 16px; }");
     connect(chkAlwaysOnTop_, &QCheckBox::toggled, this, &PreviewWindow::setAlwaysOnTop);

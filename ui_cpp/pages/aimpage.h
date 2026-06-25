@@ -15,6 +15,7 @@ class AimPage : public QWidget {
 public:
     explicit AimPage(QWidget* parent = nullptr);
     void setEngine(AimEngine* engine);
+     void syncFromConfig();
 
 private slots:
     void onKpChanged(double val);

@@ -6,7 +6,8 @@
 enum class MouseBackend {
     SendInput,
     IbInputSimulator,
-    KMBoxNet
+     KMBoxNet,
+     MaKcu
 };
 
 struct AimConfig {
@@ -50,6 +51,10 @@ struct AimConfig {
     std::string kmbox_mac  = "01FBC068";
     bool        kmbox_encrypt = true;
     bool        kmbox_bezier  = true;
+ 
+     // MaKcu
+     std::string makcu_serial = "COM1";
+     std::string makcu_port   = "8888";
 
     // 可视化
     bool enable_visualization   = true;

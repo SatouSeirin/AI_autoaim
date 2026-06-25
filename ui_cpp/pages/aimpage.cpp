@@ -160,3 +160,17 @@ void AimPage::onRangeLayoutChanged() {
     cfg.aim_range_circle = radioCircle_->isChecked();
     engine_->UpdateConfig(cfg);
 }
+
+void AimPage::syncFromConfig() {
+    if (!engine_) return;
+    auto cfg = engine_->GetConfig();
+    kpSlider_->setValue(cfg.kp);
+    kiSlider_->setValue(cfg.ki);
+    kdSlider_->setValue(cfg.kd);
+    predictStepsSlider_->setValue(cfg.kalman_prediction_steps);
+    sensitivitySlider_->setValue(cfg.sensitivity);
+    rangeSizeSlider_->setValue(cfg.aim_range_size);
+    radioCircle_->setChecked(cfg.aim_range_circle);
+    radioRect_->setChecked(!cfg.aim_range_circle);
+    onBodyPartClicked(cfg.target_body_part);
+}

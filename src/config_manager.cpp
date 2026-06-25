@@ -60,6 +60,7 @@ std::string ConfigManager::MouseBackendToString(MouseBackend b) {
         case MouseBackend::SendInput: return "SendInput";
         case MouseBackend::IbInputSimulator: return "IbInputSimulator";
         case MouseBackend::KMBoxNet: return "KMBoxNet";
+         case MouseBackend::MaKcu: return "MaKcu";
         default: return "SendInput";
     }
 }
@@ -67,6 +68,7 @@ std::string ConfigManager::MouseBackendToString(MouseBackend b) {
 MouseBackend ConfigManager::StringToMouseBackend(const std::string& s) {
     if (s == "IbInputSimulator") return MouseBackend::IbInputSimulator;
     if (s == "KMBoxNet") return MouseBackend::KMBoxNet;
+     if (s == "MaKcu") return MouseBackend::MaKcu;
     return MouseBackend::SendInput;
 }
 
@@ -114,6 +116,7 @@ AimConfig ConfigManager::Load(const std::string& filepath) {
     cfg.aim_range_circle      = getBool(json, "aim_range_circle", true);
     cfg.kp                    = getDouble(json, "kp", 0.25);
     cfg.ki                    = getDouble(json, "ki", 0.0008);
+     cfg.kd                    = getDouble(json, "kd", 0.08);
     cfg.aim_key               = getInt(json, "aim_key", 0x02);
     cfg.exit_key              = getInt(json, "exit_key", 0x71);
     cfg.switch_target_key     = getInt(json, "switch_target_key", 0x06);
@@ -127,6 +130,10 @@ AimConfig ConfigManager::Load(const std::string& filepath) {
     if (cfg.kmbox_mac.empty()) cfg.kmbox_mac = "01FBC068";
     cfg.kmbox_encrypt         = getBool(json, "kmbox_encrypt", true);
     cfg.kmbox_bezier          = getBool(json, "kmbox_bezier", true);
+     cfg.makcu_serial          = getStr(json, "makcu_serial");
+     if (cfg.makcu_serial.empty()) cfg.makcu_serial = "COM1";
+     cfg.makcu_port            = getStr(json, "makcu_port");
+     if (cfg.makcu_port.empty()) cfg.makcu_port = "8888";
     cfg.enable_visualization  = getBool(json, "enable_visualization", true);
     cfg.show_infer_latency    = getBool(json, "show_infer_latency", true);
     cfg.draw_detection_boxes  = getBool(json, "draw_detection_boxes", true);
@@ -165,6 +172,7 @@ bool ConfigManager::Save(const AimConfig& cfg, const std::string& filepath) {
     f << "  \"aim_range_size\": "          << cfg.aim_range_size << ",\n";
     f << "  \"aim_range_circle\": "        << (cfg.aim_range_circle ? "true" : "false") << ",\n";
     f << "  \"kp\": "                      << cfg.kp << ",\n";
+     f << "  \"kd\": "                      << cfg.kd << ",\n";
     f << "  \"ki\": "                      << cfg.ki << ",\n";
     f << "  \"aim_key\": "                 << cfg.aim_key << ",\n";
     f << "  \"exit_key\": "                << cfg.exit_key << ",\n";
@@ -176,6 +184,8 @@ bool ConfigManager::Save(const AimConfig& cfg, const std::string& filepath) {
     f << "  \"kmbox_mac\": \""             << EscapeJson(cfg.kmbox_mac) << "\",\n";
     f << "  \"kmbox_encrypt\": "           << (cfg.kmbox_encrypt ? "true" : "false") << ",\n";
     f << "  \"kmbox_bezier\": "            << (cfg.kmbox_bezier ? "true" : "false") << ",\n";
+     f << "  \"makcu_serial\": \""           << EscapeJson(cfg.makcu_serial) << "\",\n";
+     f << "  \"makcu_port\": \""             << EscapeJson(cfg.makcu_port) << "\",\n";
     f << "  \"enable_visualization\": "    << (cfg.enable_visualization ? "true" : "false") << ",\n";
     f << "  \"show_infer_latency\": "      << (cfg.show_infer_latency ? "true" : "false") << ",\n";
     f << "  \"draw_detection_boxes\": "    << (cfg.draw_detection_boxes ? "true" : "false") << ",\n";

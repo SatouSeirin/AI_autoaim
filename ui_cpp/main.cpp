@@ -40,7 +40,7 @@ int main(int argc, char* argv[]) {
     layout->addWidget(errLabel);
 
     auto* loginBtn = new QPushButton("Login");
-    loginBtn->setMinimumHeight(40);
+    loginBtn->setMinimumHeight(32);
     layout->addWidget(loginBtn);
 
     QObject::connect(loginBtn, &QPushButton::clicked, [&]() {

@@ -1,4 +1,5 @@
 #include "paramslider.h"
+#include <QCoreApplication>
 #include <QHBoxLayout>
 #include <cmath>
 
@@ -32,15 +33,17 @@ ParamSlider::ParamSlider(const QString& label, double min, double max,
     spinBox_->setFixedWidth(80);
     spinBox_->setSuffix(suffix);
     spinBox_->setStyleSheet(
-        "QDoubleSpinBox { border: 1px solid #D9D9D9; border-radius: 4px;"
-        " padding: 3px 6px; font-size: 14px; color: #333333; }"
-        "QDoubleSpinBox:focus { border-color: #1890FF; }");
+        "QDoubleSpinBox { border: 1px solid #E5E5EA; border-radius: 8px;"
+        " padding: 3px 6px; font-size: 14px; color: #1E293B; }"
+        "QDoubleSpinBox:focus { border-color: #007AFF; }");
     layout->addWidget(spinBox_);
 
     // 4) 信号连接（双向绑定，防递归）
     connect(slider_, &QSlider::valueChanged, this, &ParamSlider::onSliderChanged);
     connect(spinBox_, QOverload<double>::of(&QDoubleSpinBox::valueChanged),
             this, &ParamSlider::onSpinBoxChanged);
+    slider_->installEventFilter(this);
+    spinBox_->installEventFilter(this);
 }
 
 double ParamSlider::value() const {
@@ -69,4 +72,11 @@ void ParamSlider::onSpinBoxChanged(double doubleVal) {
     slider_->setValue(static_cast<int>((doubleVal - min_) / (max_ - min_) * precision_));
     updating_ = false;
     emit valueChanged(doubleVal);
+}
+
+bool ParamSlider::eventFilter(QObject* obj, QEvent* event) {
+    if (event->type() == QEvent::Wheel) {
+        return true;  // ignore wheel
+    }
+    return QWidget::eventFilter(obj, event);
 }

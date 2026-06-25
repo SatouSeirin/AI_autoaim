@@ -144,12 +144,33 @@ void MainWindow::setupHotkeys() {
         });
     });
 
-
     connect(sp, &SettingsPage::aimKeyChanged, this, [this](int) {
         syncConfigFromUI();
     });
 
-    connect(sp, &SettingsPage::exitKeyChanged, this, [this](int vk) {
+    connect(sp, &SettingsPage::switchKeyChanged, this, [this](int) {
+        syncConfigFromUI();
+    });
+
+    // Load profile -> sync UI
+    connect(sp, &SettingsPage::loadProfileRequested, this, [this](const QString& path) {
+        if (!engine_) return;
+        auto cfg = engine_->GetConfig();
+        settingsPage_->syncFromConfig();
+        aimPage_->syncFromConfig();
+        modelPage_->syncSlidersFromConfig();
+        if (!cfg.model_path.empty()) {
+            // Load the model from config path
+            modelPage_->loadModelFromPath(QString::fromStdString(cfg.model_path));
+            QFileInfo fi(QString::fromStdString(cfg.model_path));
+            topModelStatus_->setText(QString::fromUtf8("\xe2\x9c\xa8") + fi.fileName());
+            topModelStatus_->setObjectName("statusRunning");
+            topModelStatus_->style()->unpolish(topModelStatus_);
+            topModelStatus_->style()->polish(topModelStatus_);
+        }
+    });
+
+        connect(sp, &SettingsPage::exitKeyChanged, this, [this](int vk) {
         hotkeyManager_->Unregister(2);
         hotkeyManager_->Register(2, MOD_NOREPEAT, vk, [this](int) {
             QMetaObject::invokeMethod(this, [this]() {

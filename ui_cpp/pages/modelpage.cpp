@@ -113,6 +113,10 @@ void ModelPage::setEngine(AimEngine* engine) {
 }
 
 // ── 拖拽/选择 ONNX 或 .engine ──
+void ModelPage::loadModelFromPath(const QString& path) {
+    onFileDropped(path);
+}
+
 void ModelPage::onFileDropped(const QString& path) {
     if (!engine_) {
         QMessageBox::warning(this, "错误", "引擎未初始化");

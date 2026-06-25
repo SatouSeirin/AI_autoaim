@@ -31,7 +31,6 @@ public slots:
     void updateFrame(const QImage& frame);
 
 private slots:
-    void onInputModeChanged();
     void onShowLatencyToggled(bool on);
     void onDebugWindowToggled(bool on);
     void onDrawBoxesToggled(bool on);
@@ -40,7 +39,6 @@ private slots:
 
 private:
     void setupPreviewArea(QGroupBox* group);
-    void setupInputMode(QGroupBox* group);
     void setupDisplaySettings(QGroupBox* group);
 
     AimEngine* engine_ = nullptr;
@@ -55,8 +53,6 @@ private:
     PreviewWindow* previewWin_  = nullptr;
 
     // 输入模式
-    QRadioButton* radioSendInput_ = nullptr;
-    QRadioButton* radioIbInput_   = nullptr;
 
     // 显示设置
     QCheckBox* chkShowLatency_ = nullptr;

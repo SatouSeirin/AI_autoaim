@@ -3,6 +3,7 @@
 #include <QWidget>
 #include <QSlider>
 #include <QDoubleSpinBox>
+#include <QEvent>
 #include <QLabel>
 
 // ============================================================
@@ -31,6 +32,9 @@ signals:
 private slots:
     void onSliderChanged(int intVal);
     void onSpinBoxChanged(double doubleVal);
+
+protected:
+    bool eventFilter(QObject* obj, QEvent* event) override;
 
 private:
     QLabel*          label_;

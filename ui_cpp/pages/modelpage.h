@@ -22,7 +22,8 @@ public:
     explicit ModelPage(QWidget* parent = nullptr);
     void setEngine(AimEngine* engine);
     void syncSlidersFromConfig();
-    void refreshClassCheckboxes();  // 模型加载后刷新类别勾选
+    void refreshClassCheckboxes();
+    void loadModelFromPath(const QString& path);  // 模型加载后刷新类别勾选
 
 signals:
     void modelLoaded(const QString& path, bool success);

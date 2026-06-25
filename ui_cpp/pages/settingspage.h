@@ -6,6 +6,8 @@
 #include <QComboBox>
 #include <QPushButton>
 #include <QGroupBox>
+ #include <QLineEdit>
+ #include <QStackedWidget>
 
 #include "../widgets/hotkeycapture.h"
 #include "../../src/engine.hpp"
@@ -34,17 +36,21 @@ public:
     void setSwitchKey(int vk);
 
 signals:
+    void startStopKeyChanged(int vk);
+    void aimKeyChanged(int vk);
+    void exitKeyChanged(int vk);
+    void switchKeyChanged(int vk);
     void saveProfileRequested(const QString& path);
     void loadProfileRequested(const QString& path);
 
 public slots:
     void setEngine(AimEngine* engine) { engine_ = engine; }
+     void onInputModeChanged(int index);
+     void onKmboxConnect();
+     void onMakcuConnect();
     void onSaveProfile();
     void onLoadProfile();
-    void startStopKeyChanged(int vk);
-    void aimKeyChanged(int vk);
-    void exitKeyChanged(int vk);
-    void switchKeyChanged(int vk);
+
 
 private:
     void setupGeneral(QGroupBox* group);
@@ -52,9 +58,21 @@ private:
     void setupProfiles(QGroupBox* group);
     void setupUpdate(QGroupBox* group);
     void setupAbout(QGroupBox* group);
+     void setupInputMode(QGroupBox* group);
 
-    QCheckBox*    chkAutoStart_    = nullptr;
-    QCheckBox*    chkMinimizeTray_ = nullptr;
+     // 输入模式
+     QComboBox*    comboInputMode_   = nullptr;
+     QStackedWidget* inputConfigStack_ = nullptr;
+     QLineEdit*    kmboxIpEdit_      = nullptr;
+     QLineEdit*    kmboxPortEdit_    = nullptr;
+     QLineEdit*    kmboxUuidEdit_    = nullptr;
+     QPushButton*  btnKmboxConnect_  = nullptr;
+     QLineEdit*    makcuSerialEdit_  = nullptr;
+     QLineEdit*    makcuPortEdit_    = nullptr;
+     QPushButton*  btnMakcuConnect_  = nullptr;
+ 
+    QCheckBox* chkAutoStart_    = nullptr;
+    QCheckBox* chkMinimizeTray_ = nullptr;
     QComboBox*    comboLanguage_   = nullptr;
     QLabel*       versionLabel_    = nullptr;
 

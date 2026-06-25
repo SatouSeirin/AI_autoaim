@@ -8,7 +8,16 @@
 #include <QLabel>
 #include <QFormLayout>
 #include <QFrame>
+ #include <QLineEdit>
+ #include <QStackedWidget>
 #include <windows.h>
+struct WheelBlocker : QObject {
+    using QObject::QObject;
+    bool eventFilter(QObject* obj, QEvent* event) override {
+        if (event->type() == QEvent::Wheel) return true;
+        return QObject::eventFilter(obj, event);
+    }
+};
 
 SettingsPage::SettingsPage(QWidget* parent) : QWidget(parent) {
     auto* outerLayout = new QVBoxLayout(this);
@@ -30,9 +39,14 @@ SettingsPage::SettingsPage(QWidget* parent) : QWidget(parent) {
     auto* hotkeyGroup = new QGroupBox("⌨ 热键绑定", this);
     setupHotkeys(hotkeyGroup);
     mainLayout->addWidget(hotkeyGroup);
+ 
+     // ── 输入模式 ──
+     auto* inputGroup = new QGroupBox("🖥 输入模式 / 鼠标后端", this);
+     setupInputMode(inputGroup);
+     mainLayout->addWidget(inputGroup);
 
-    // Config Profiles
-    auto* profileGroup = new QGroupBox("Config Profiles", this);
+    // 配置文件
+    auto* profileGroup = new QGroupBox("配置文件", this);
     setupProfiles(profileGroup);
     mainLayout->addWidget(profileGroup);
 
@@ -112,16 +126,16 @@ void SettingsPage::setupProfiles(QGroupBox* group) {
     auto* layout = new QVBoxLayout(group);
     layout->setSpacing(10);
     layout->setContentsMargins(16, 16, 16, 16);
-    auto* desc = new QLabel("Save or load configuration profiles (.json)", group);
+    auto* desc = new QLabel("保存或加载配置文件 (.json)", group);
     desc->setStyleSheet("font-size: 13px; color: #888888;");
     layout->addWidget(desc);
     auto* btnRow = new QHBoxLayout();
-    btnSaveProfile_ = new QPushButton("Save Profile As...", group);
+    btnSaveProfile_ = new QPushButton("保存配置文件...", group);
     btnSaveProfile_->setCursor(Qt::PointingHandCursor);
     btnSaveProfile_->setMinimumHeight(32);
     connect(btnSaveProfile_, &QPushButton::clicked, this, &SettingsPage::onSaveProfile);
     btnRow->addWidget(btnSaveProfile_);
-    btnLoadProfile_ = new QPushButton("Load Profile...", group);
+    btnLoadProfile_ = new QPushButton("加载配置文件...", group);
     btnLoadProfile_->setCursor(Qt::PointingHandCursor);
     btnLoadProfile_->setMinimumHeight(32);
     connect(btnLoadProfile_, &QPushButton::clicked, this, &SettingsPage::onLoadProfile);
@@ -138,7 +152,7 @@ void SettingsPage::setupGeneral(QGroupBox* group) {
     lbl1->setStyleSheet("font-size: 14px; color: #333333;");
     chkAutoStart_ = new QCheckBox(group);
     chkAutoStart_->setChecked(false);
-    chkAutoStart_->setStyleSheet("QCheckBox::indicator { width: 40px; height: 22px; }");
+    chkAutoStart_->style()->polish(chkAutoStart_);
     row1->addWidget(lbl1);
     row1->addStretch();
     row1->addWidget(chkAutoStart_);
@@ -149,7 +163,7 @@ void SettingsPage::setupGeneral(QGroupBox* group) {
     lbl2->setStyleSheet("font-size: 14px; color: #333333;");
     chkMinimizeTray_ = new QCheckBox(group);
     chkMinimizeTray_->setChecked(true);
-    chkMinimizeTray_->setStyleSheet("QCheckBox::indicator { width: 40px; height: 22px; }");
+    chkMinimizeTray_->style()->polish(chkMinimizeTray_);
     row2->addWidget(lbl2);
     row2->addStretch();
     row2->addWidget(chkMinimizeTray_);
@@ -162,6 +176,7 @@ void SettingsPage::setupGeneral(QGroupBox* group) {
     comboLanguage_->addItem("简体中文");
     comboLanguage_->addItem("English");
     comboLanguage_->setCurrentIndex(0);
+    comboLanguage_->installEventFilter(new WheelBlocker(comboLanguage_));
     comboLanguage_->setFixedWidth(140);
     comboLanguage_->setStyleSheet(
         "QComboBox { border: 1px solid #D9D9D9; border-radius: 4px;"
@@ -209,10 +224,24 @@ void SettingsPage::syncFromConfig() {
     setAimKey(cfg.aim_key);
     setExitKey(cfg.exit_key);
     setSwitchKey(cfg.switch_target_key);
+    // 同步输入模式
+    if (comboInputMode_) {
+        int idx = static_cast<int>(cfg.mouse_backend);
+        if (idx < 0 || idx >= comboInputMode_->count()) idx = 0;
+        comboInputMode_->setCurrentIndex(idx);
+        if (idx == 2) inputConfigStack_->setCurrentIndex(1);
+        else if (idx == 3) inputConfigStack_->setCurrentIndex(2);
+        else inputConfigStack_->setCurrentIndex(0);
+        if (kmboxIpEdit_) kmboxIpEdit_->setText(QString::fromStdString(cfg.kmbox_ip));
+        if (kmboxPortEdit_) kmboxPortEdit_->setText(QString::fromStdString(cfg.kmbox_port));
+        if (kmboxUuidEdit_) kmboxUuidEdit_->setText(QString::fromStdString(cfg.kmbox_mac));
+        if (makcuSerialEdit_) makcuSerialEdit_->setText(QString::fromStdString(cfg.makcu_serial));
+        if (makcuPortEdit_) makcuPortEdit_->setText(QString::fromStdString(cfg.makcu_port));
+    }
 }
 
 void SettingsPage::onSaveProfile() {
-    QString path = QFileDialog::getSaveFileName(this, "Save Profile", "profile.json", "Config Files (*.json)");
+    QString path = QFileDialog::getSaveFileName(this, "保存配置", "profile.json", "配置文件 (*.json)");
     if (path.isEmpty()) return;
     if (engine_) {
         ConfigManager::Save(engine_->GetConfig(), path.toStdString());
@@ -220,7 +249,7 @@ void SettingsPage::onSaveProfile() {
 }
 
 void SettingsPage::onLoadProfile() {
-    QString path = QFileDialog::getOpenFileName(this, "Load Profile", "", "Config Files (*.json)");
+    QString path = QFileDialog::getOpenFileName(this, "加载配置", "", "配置文件 (*.json)");
     if (path.isEmpty()) return;
     if (engine_) {
         AimConfig cfg = ConfigManager::Load(path.toStdString());
@@ -240,21 +269,171 @@ void SettingsPage::setAimKey(int vk)       { if (hkAim_)       hkAim_->setVkCode
 void SettingsPage::setExitKey(int vk)      { if (hkExit_)      hkExit_->setVkCode(vk); }
 
 // Manual signal implementations (Qt6 MOC workaround)
-void SettingsPage::startStopKeyChanged(int vk) {
-    void* _a[] = { nullptr, const_cast<void*>(reinterpret_cast<const void*>(&vk)) };
-    QMetaObject::activate(this, &staticMetaObject, 2, _a);
-}
-void SettingsPage::aimKeyChanged(int vk) {
-    void* _a[] = { nullptr, const_cast<void*>(reinterpret_cast<const void*>(&vk)) };
-    QMetaObject::activate(this, &staticMetaObject, 3, _a);
-}
-void SettingsPage::exitKeyChanged(int vk) {
-    void* _a[] = { nullptr, const_cast<void*>(reinterpret_cast<const void*>(&vk)) };
-    QMetaObject::activate(this, &staticMetaObject, 4, _a);
-}
-void SettingsPage::switchKeyChanged(int vk) {
-    void* _a[] = { nullptr, const_cast<void*>(reinterpret_cast<const void*>(&vk)) };
-    QMetaObject::activate(this, &staticMetaObject, 5, _a);
-}
 
 void SettingsPage::setSwitchKey(int vk)    { if (hkSwitch_)    hkSwitch_->setVkCode(vk); }
+ 
+ // ============================================================
+ // 输入模式 / 鼠标后端
+ // ============================================================
+ void SettingsPage::setupInputMode(QGroupBox* group) {
+     auto* layout = new QVBoxLayout(group);
+     layout->setSpacing(10);
+     layout->setContentsMargins(16, 16, 16, 16);
+ 
+     auto* topRow = new QHBoxLayout();
+     auto* lbl = new QLabel("后端类型", group);
+     lbl->setStyleSheet("font-size: 14px; color: #333333; font-weight: bold;");
+     topRow->addWidget(lbl);
+ 
+     comboInputMode_ = new QComboBox(group);
+     comboInputMode_->addItems({"SendInput", "IbInputSimulator", "KMBoxNet", "MaKcu"});
+     comboInputMode_->setMinimumWidth(180);
+    comboInputMode_->installEventFilter(new WheelBlocker(comboInputMode_));
+     topRow->addWidget(comboInputMode_);
+     topRow->addStretch();
+     layout->addLayout(topRow);
+ 
+     // Stacked widget: 0=empty, 1=KMBoxNet, 2=MaKcu
+     inputConfigStack_ = new QStackedWidget(group);
+ 
+     // Page 0: 空面板（SendInput / IbInputSimulator）
+     auto* emptyPage = new QWidget(group);
+     auto* emptyLabel = new QLabel("无需额外配置，选择后直接生效", emptyPage);
+     emptyLabel->setStyleSheet("font-size: 13px; color: #999999; padding: 16px 0;");
+     auto* emptyLayout = new QVBoxLayout(emptyPage);
+     emptyLayout->addWidget(emptyLabel);
+     emptyLayout->addStretch();
+         auto* backendStatusLabel = new QLabel("当前后端: 未连接", emptyPage);
+    backendStatusLabel->setObjectName("backendStatusLabel");
+    backendStatusLabel->setStyleSheet("font-size: 13px; color: #64748B; padding: 8px 0;");
+    emptyLayout->addWidget(backendStatusLabel);
+inputConfigStack_->addWidget(emptyPage);  // index 0
+ 
+     // Page 1: KMBoxNet 配置
+     auto* kmboxPage = new QWidget(group);
+     auto* kmboxLayout = new QVBoxLayout(kmboxPage);
+     kmboxLayout->setSpacing(8);
+ 
+     auto makeRow = [](const QString& label, QLineEdit*& edit, const QString& placeholder, QWidget* parent) -> QHBoxLayout* {
+         auto* row = new QHBoxLayout();
+         auto* lbl = new QLabel(label, parent);
+         lbl->setFixedWidth(60);
+         lbl->setStyleSheet("font-size: 13px; color: #555555;");
+         edit = new QLineEdit(parent);
+         edit->setPlaceholderText(placeholder);
+         edit->setMinimumWidth(200);
+         edit->setStyleSheet(
+             "QLineEdit { border: 1px solid #D9D9D9; border-radius: 4px;"
+             " padding: 4px 8px; font-size: 13px; color: #333333; background: #FFFFFF; }"
+             "QLineEdit:focus { border-color: #3B82F6; }");
+         row->addWidget(lbl);
+         row->addWidget(edit);
+         row->addStretch();
+         return row;
+     };
+ 
+     kmboxLayout->addLayout(makeRow("IP:", kmboxIpEdit_, "192.168.2.188", kmboxPage));
+     kmboxLayout->addLayout(makeRow("Port:", kmboxPortEdit_, "8888", kmboxPage));
+     kmboxLayout->addLayout(makeRow("UUID:", kmboxUuidEdit_, "01FBC068", kmboxPage));
+ 
+     auto* kmboxBtnRow = new QHBoxLayout();
+     btnKmboxConnect_ = new QPushButton("连接 KMBoxNet", kmboxPage);
+     btnKmboxConnect_->setObjectName("btnPrimary");
+     btnKmboxConnect_->setCursor(Qt::PointingHandCursor);
+     btnKmboxConnect_->setFixedWidth(140);
+     connect(btnKmboxConnect_, &QPushButton::clicked, this, &SettingsPage::onKmboxConnect);
+     kmboxBtnRow->addWidget(btnKmboxConnect_);
+     kmboxBtnRow->addStretch();
+     kmboxLayout->addLayout(kmboxBtnRow);
+     inputConfigStack_->addWidget(kmboxPage);  // index 1
+ 
+     // Page 2: MaKcu 配置
+     auto* makcuPage = new QWidget(group);
+     auto* makcuLayout = new QVBoxLayout(makcuPage);
+     makcuLayout->setSpacing(8);
+ 
+     makcuLayout->addLayout(makeRow("串口:", makcuSerialEdit_, "COM1", makcuPage));
+     makcuLayout->addLayout(makeRow("比特率:", makcuPortEdit_, "115200", makcuPage));
+ 
+     auto* makcuBtnRow = new QHBoxLayout();
+     btnMakcuConnect_ = new QPushButton("连接 MaKcu", makcuPage);
+     btnMakcuConnect_->setObjectName("btnPrimary");
+     btnMakcuConnect_->setCursor(Qt::PointingHandCursor);
+     btnMakcuConnect_->setFixedWidth(140);
+     connect(btnMakcuConnect_, &QPushButton::clicked, this, &SettingsPage::onMakcuConnect);
+     makcuBtnRow->addWidget(btnMakcuConnect_);
+     makcuBtnRow->addStretch();
+     makcuLayout->addLayout(makcuBtnRow);
+     inputConfigStack_->addWidget(makcuPage);  // index 2
+ 
+     layout->addWidget(inputConfigStack_);
+ 
+     connect(comboInputMode_, QOverload<int>::of(&QComboBox::currentIndexChanged),
+             this, &SettingsPage::onInputModeChanged);
+ }
+ 
+ void SettingsPage::onInputModeChanged(int index) {
+     if (!engine_) return;
+     auto cfg = engine_->GetConfig();
+     cfg.mouse_backend = static_cast<MouseBackend>(index);
+ 
+     // 保存当前填写的连接参数
+     cfg.kmbox_ip   = kmboxIpEdit_->text().toStdString();
+     cfg.kmbox_port = kmboxPortEdit_->text().toStdString();
+     cfg.kmbox_mac  = kmboxUuidEdit_->text().toStdString();
+     cfg.makcu_serial = makcuSerialEdit_->text().toStdString();
+     cfg.makcu_port   = makcuPortEdit_->text().toStdString();
+ 
+     engine_->UpdateConfig(cfg);
+ 
+     // 切换堆叠页面
+     if (index == 2) inputConfigStack_->setCurrentIndex(1);
+     else if (index == 3) inputConfigStack_->setCurrentIndex(2);
+     else inputConfigStack_->setCurrentIndex(0);
+     // ????????
+    // ????? emptyPage ?
+    QLabel* statusLabel = findChild<QLabel*>("backendStatusLabel");
+    if (statusLabel) {
+        switch (index) {
+            case 0: statusLabel->setText("当前后端: SendInput (已就绪)"); break;
+            case 1: {
+                bool ibOk = false;
+                if (engine_) {
+                    auto cfg = engine_->GetConfig();
+                    cfg.mouse_backend = MouseBackend::IbInputSimulator;
+                    engine_->UpdateConfig(cfg);
+                    ibOk = true;
+                }
+                statusLabel->setText(ibOk ?
+                    "当前后端: IbInputSimulator (已加载)" :
+                    "当前后端: IbInputSimulator (加载失败)");
+                break;
+            }
+            default: break;
+        }
+    }
+
+}
+ 
+ void SettingsPage::onKmboxConnect() {
+     if (!engine_) return;
+     auto cfg = engine_->GetConfig();
+     cfg.kmbox_ip   = kmboxIpEdit_->text().toStdString();
+     cfg.kmbox_port = kmboxPortEdit_->text().toStdString();
+     cfg.kmbox_mac  = kmboxUuidEdit_->text().toStdString();
+     cfg.mouse_backend = MouseBackend::KMBoxNet;
+     engine_->UpdateConfig(cfg);
+     comboInputMode_->setCurrentIndex(2);
+     std::cout << "[KMBoxNet] Connecting to " << cfg.kmbox_ip << ":" << cfg.kmbox_port << std::endl;
+ }
+ 
+ void SettingsPage::onMakcuConnect() {
+     if (!engine_) return;
+     auto cfg = engine_->GetConfig();
+     cfg.makcu_serial = makcuSerialEdit_->text().toStdString();
+     cfg.makcu_port   = makcuPortEdit_->text().toStdString();
+     cfg.mouse_backend = MouseBackend::MaKcu;
+     engine_->UpdateConfig(cfg);
+     comboInputMode_->setCurrentIndex(3);
+     std::cout << "[MaKcu] Connecting on " << cfg.makcu_serial << ":" << cfg.makcu_port << std::endl;
+ }

@@ -30,10 +30,7 @@ PreviewPage::PreviewPage(QWidget* parent) : QWidget(parent) {
     setupPreviewArea(previewGroup);
     mainLayout->addWidget(previewGroup);
 
-    auto* inputGroup = new QGroupBox(QString::fromUtf8("\xe2\x8c\xa8 \xe8\xbe\x93\xe5\x85\xa5\xe6\xa8\xa1\xe5\xbc\x8f"), this);
-    setupInputMode(inputGroup);
-    mainLayout->addWidget(inputGroup);
-
+    
     auto* displayGroup = new QGroupBox(QString::fromUtf8("\xf0\x9f\x96\xa5 \xe6\x98\xbe\xe7\xa4\xba\xe8\xae\xbe\xe7\xbd\xae"), this);
     setupDisplaySettings(displayGroup);
     mainLayout->addWidget(displayGroup);
@@ -206,31 +203,7 @@ void PreviewPage::onPopOutToggled(bool /*on*/) {
 }
 
 // ============================================================
-// 输入模式
-// ============================================================
-void PreviewPage::setupInputMode(QGroupBox* group) {
-    auto* layout = new QVBoxLayout(group);
-
-    radioSendInput_ = new QRadioButton(QString::fromUtf8("\xe6\xa0\x87\xe5\x87\x86 SendInput"), group);
-    radioSendInput_->setChecked(true);
-    radioSendInput_->setStyleSheet("font-size: 14px; color: #333333;");
-    auto* sendHint = new QLabel(QString::fromUtf8(
-        "\xe4\xbd\xbf\xe7\x94\xa8\xe5\x8e\x9f\xe7\x94\x9f Windows API\xef\xbc\x8c\xe9\x83\xa8\xe5\x88\x86\xe6\xb8\xb8\xe6\x88\x8f\xe5\x8f\xaf\xe8\x83\xbd\xe4\xbc\x9a\xe5\xb1\x8f\xe8\x94\xbd\xe8\xaf\xa5\xe8\xbe\x93\xe5\x85\xa5\xe6\x96\xb9\xe5\xbc\x8f"), group);
-    sendHint->setStyleSheet("font-size: 12px; color: #888888; margin-left: 24px;");
-    layout->addWidget(radioSendInput_);
-    layout->addWidget(sendHint);
-
-    radioIbInput_ = new QRadioButton("IbInputSimulator (\xe9\xa9\xb1\xe5\x8a\xa8\xe7\xba\xa7)", group);
-    radioIbInput_->setStyleSheet("font-size: 14px; color: #333333;");
-    auto* ibHint = new QLabel(QString::fromUtf8("\xe5\x86\x85\xe6\xa0\xb8\xe9\xa9\xb1\xe5\x8a\xa8\xe6\xb3\xa8\xe5\x85\xa5\xef\xbc\x8c\xe5\x85\xbc\xe5\xae\xb9\xe6\x80\xa7\xe6\x9b\xb4\xe5\xa5\xbd"), group);
-    ibHint->setStyleSheet("font-size: 12px; color: #888888; margin-left: 24px;");
-    layout->addWidget(radioIbInput_);
-    layout->addWidget(ibHint);
-
-    connect(radioSendInput_, &QRadioButton::toggled, this, &PreviewPage::onInputModeChanged);
-    connect(radioIbInput_,   &QRadioButton::toggled, this, &PreviewPage::onInputModeChanged);
-}
-
+// 输入模式
 // ============================================================
 // 显示设置（截图尺寸 + 选项）
 // ============================================================
@@ -282,7 +255,7 @@ void PreviewPage::setupDisplaySettings(QGroupBox* group) {
     lbl1->setStyleSheet("font-size: 14px; color: #333333;");
     chkShowLatency_ = new QCheckBox(group);
     chkShowLatency_->setChecked(true);
-    chkShowLatency_->setStyleSheet("QCheckBox::indicator { width: 40px; height: 22px; }");
+    chkShowLatency_->style()->polish(chkShowLatency_);
     connect(chkShowLatency_, &QCheckBox::toggled, this, &PreviewPage::onShowLatencyToggled);
     row1->addWidget(lbl1);
     row1->addStretch();
@@ -295,7 +268,7 @@ void PreviewPage::setupDisplaySettings(QGroupBox* group) {
     lbl2->setStyleSheet("font-size: 14px; color: #333333;");
     chkDebugWindow_ = new QCheckBox(group);
     chkDebugWindow_->setChecked(false);
-    chkDebugWindow_->setStyleSheet("QCheckBox::indicator { width: 40px; height: 22px; }");
+    chkDebugWindow_->style()->polish(chkDebugWindow_);
     connect(chkDebugWindow_, &QCheckBox::toggled, this, &PreviewPage::onDebugWindowToggled);
     row2->addWidget(lbl2);
     row2->addStretch();
@@ -308,7 +281,7 @@ void PreviewPage::setupDisplaySettings(QGroupBox* group) {
     lbl3->setStyleSheet("font-size: 14px; color: #333333;");
     chkDrawBoxes_ = new QCheckBox(group);
     chkDrawBoxes_->setChecked(true);
-    chkDrawBoxes_->setStyleSheet("QCheckBox::indicator { width: 40px; height: 22px; }");
+    chkDrawBoxes_->style()->polish(chkDrawBoxes_);
     connect(chkDrawBoxes_, &QCheckBox::toggled, this, &PreviewPage::onDrawBoxesToggled);
     row3->addWidget(lbl3);
     row3->addStretch();
@@ -331,13 +304,6 @@ void PreviewPage::onCaptureSizeChanged(int idx) {
     }
 }
 
-void PreviewPage::onInputModeChanged() {
-    if (!engine_) return;
-    auto cfg = engine_->GetConfig();
-    cfg.mouse_backend = radioIbInput_->isChecked()
-        ? MouseBackend::IbInputSimulator : MouseBackend::SendInput;
-    engine_->UpdateConfig(cfg);
-}
 
 void PreviewPage::onShowLatencyToggled(bool on) {
     if (!engine_) return;
