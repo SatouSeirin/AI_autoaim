@@ -25,6 +25,7 @@ public:
     explicit PreviewPage(QWidget* parent = nullptr);
     ~PreviewPage() override;
     void setEngine(AimEngine* engine);
+    void setFpsInfo(double fps, double ms);
 
 public slots:
     void updateFrame(const QImage& frame);
@@ -46,6 +47,7 @@ private:
 
     // 内嵌预览
     QLabel*       previewLabel_ = nullptr;
+    QLabel*       fpsLabel_       = nullptr;
     QPushButton*  debugBtn_     = nullptr;
     QPushButton*  popOutBtn_    = nullptr;
 

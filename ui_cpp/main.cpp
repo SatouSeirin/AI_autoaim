@@ -6,12 +6,14 @@
 #include <QLabel>
 #include <QLineEdit>
 #include <QPushButton>
+#include <QStyleFactory>
 #include "mainwindow.h"
 
 int main(int argc, char* argv[]) {
     QApplication app(argc, argv);
     app.setApplicationName("MiniSense");
     app.setApplicationVersion("2.1.0");
+    app.setStyle(QStyleFactory::create("Fusion"));
 
     // Login dialog
     QDialog loginDlg;

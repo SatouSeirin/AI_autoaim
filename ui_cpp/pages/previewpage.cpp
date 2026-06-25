@@ -39,6 +39,11 @@ PreviewPage::PreviewPage(QWidget* parent) : QWidget(parent) {
     mainLayout->addWidget(displayGroup);
 
     mainLayout->addStretch();
+
+    fpsLabel_ = new QLabel("FPS: -- | \u63a8\u7406: -- ms", this);
+    fpsLabel_->setStyleSheet("font-size: 13px; color: #64748B; padding: 8px 0;");
+    fpsLabel_->setAlignment(Qt::AlignRight);
+    mainLayout->addWidget(fpsLabel_);
 }
 
 PreviewPage::~PreviewPage() {
@@ -361,4 +366,13 @@ void PreviewPage::onDrawBoxesToggled(bool on) {
     cfg.enable_visualization = on;
     cfg.draw_detection_boxes = on;
     engine_->UpdateConfig(cfg);
+
+
+
+}
+
+void PreviewPage::setFpsInfo(double fps, double ms) {
+    if (fpsLabel_) {
+        fpsLabel_->setText(QString("FPS: %1 | ??: %2 ms").arg(fps, 0, 'f', 1).arg(ms, 0, 'f', 1));
+    }
 }

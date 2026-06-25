@@ -62,8 +62,6 @@ private:
 
     QLabel* topSysStatus_   = nullptr;
     QLabel* topModelStatus_ = nullptr;
-    QLabel* fpsLabel_        = nullptr;
-    QTimer* fpsTimer_        = nullptr;
 
     QList<QPushButton*> navButtons_;
 };
