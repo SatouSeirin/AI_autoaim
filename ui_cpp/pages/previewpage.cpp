@@ -2,6 +2,7 @@
 #include "../../src/engine.hpp"
 #include "../widgets/previewwindow.h"
 
+#include <QScrollArea>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QGroupBox>
@@ -10,7 +11,18 @@
 #include <QPixmap>
 
 PreviewPage::PreviewPage(QWidget* parent) : QWidget(parent) {
-    auto* mainLayout = new QVBoxLayout(this);
+    auto* outerLayout = new QVBoxLayout(this);
+    outerLayout->setContentsMargins(0, 0, 0, 0);
+
+    auto* scrollArea = new QScrollArea(this);
+    scrollArea->setWidgetResizable(true);
+    scrollArea->setFrameShape(QFrame::NoFrame);
+    outerLayout->addWidget(scrollArea);
+
+    auto* container = new QWidget();
+    scrollArea->setWidget(container);
+
+    auto* mainLayout = new QVBoxLayout(container);
     mainLayout->setContentsMargins(30, 20, 30, 20);
     mainLayout->setSpacing(24);
 

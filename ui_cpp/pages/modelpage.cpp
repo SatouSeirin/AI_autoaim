@@ -1,6 +1,7 @@
 #include "modelpage.h"
 #include "../../src/engine.hpp"
 
+#include <QScrollArea>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QGridLayout>
@@ -14,7 +15,18 @@
 ModelPage::ModelPage(QWidget* parent)
     : QWidget(parent) {
 
-    auto* mainLayout = new QVBoxLayout(this);
+    auto* outerLayout = new QVBoxLayout(this);
+    outerLayout->setContentsMargins(0, 0, 0, 0);
+
+    auto* scrollArea = new QScrollArea(this);
+    scrollArea->setWidgetResizable(true);
+    scrollArea->setFrameShape(QFrame::NoFrame);
+    outerLayout->addWidget(scrollArea);
+
+    auto* container = new QWidget();
+    scrollArea->setWidget(container);
+
+    auto* mainLayout = new QVBoxLayout(container);
     mainLayout->setContentsMargins(30, 20, 30, 20);
     mainLayout->setSpacing(24);
 
@@ -86,7 +98,7 @@ ModelPage::ModelPage(QWidget* parent)
 
     mainLayout->addStretch();
 
-    timerId_ = startTimer(500);
+    // FPS timer moved to MainWindow
 
     loadWatcher_ = new QFutureWatcher<bool>(this);
     connect(loadWatcher_, &QFutureWatcher<bool>::finished, this, &ModelPage::onModelLoadFinished);
