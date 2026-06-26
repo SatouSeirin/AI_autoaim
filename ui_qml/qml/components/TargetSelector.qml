@@ -13,6 +13,8 @@ Item {
     property double ratio: 0.35
     // 是否在组件上绘制瞄准十字
     property bool showAimPoint: false
+    // 内部同步标志：防止 config→ratio→config 反馈循环
+    property bool _syncing: false
 
     // ── 人体矩形框 ──
     Rectangle {
@@ -125,6 +127,17 @@ Item {
     // ratio 变化时重绘十字 + 移动标签
     onRatioChanged: {
         aimCanvas.requestPaint()
+        if (!_syncing) {
+            // 用户拖拽 → 写入 config（由 AimPage Connections 处理）
+        }
+    }
+
+    // 外部配置变更时调用（由 AimPage Connections 触发）
+    function syncFromConfig(newRatio) {
+        if (Math.abs(ratio - newRatio) < 0.001) return
+        _syncing = true
+        ratio = newRatio
+        _syncing = false
     }
 
     // ── 部位标签 ──

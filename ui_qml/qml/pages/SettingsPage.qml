@@ -282,6 +282,14 @@ Flickable {
                             loadFileDialog.open()
                         }
                     }
+
+                    ButtonStyled {
+                        text: "\u6062\u590D\u9ED8\u8BA4"
+                        type: "danger"
+                        onClicked: {
+                            resetConfirmDialog.open()
+                        }
+                    }
                 }
             }
         }
@@ -385,6 +393,19 @@ Flickable {
             if (path.indexOf("file:///") === 0) path = path.substring(8)
             if (Qt.platform.os === "windows") path = path.replace(/\//g, "\\")
             engine.loadProfile(path)
+        }
+    }
+
+    // 恢复默认确认对话框
+    MessageDialog {
+        id: resetConfirmDialog
+        title: "\u6062\u590D\u9ED8\u8BA4\u914D\u7F6E"
+        text: "\u786E\u5B9A\u8981\u6062\u590D\u6240\u6709\u914D\u7F6E\u4E3A\u9ED8\u8BA4\u503C\u5417\uFF1F\u6B64\u64CD\u4F5C\u4E0D\u53EF\u64A4\u9500\u3002"
+        buttons: MessageDialog.Yes | MessageDialog.No
+        onButtonClicked: function(button, role, source) {
+            if (button === MessageDialog.Yes) {
+                engine.resetConfig()
+            }
         }
     }
 

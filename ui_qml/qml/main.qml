@@ -94,4 +94,19 @@ ApplicationWindow {
             }
         }
     }
+
+    // 全局 Toast 提示（覆盖在最上层）
+    Toast {
+        id: toast
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.bottom: parent.bottom
+        anchors.bottomMargin: 60
+    }
+
+    Connections {
+        target: engine
+        function onProfileLoaded(success, message) {
+            toast.show(message, success ? "success" : "error")
+        }
+    }
 }

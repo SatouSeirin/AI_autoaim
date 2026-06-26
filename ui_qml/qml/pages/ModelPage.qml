@@ -82,21 +82,21 @@ Flickable {
                         Layout.fillWidth: true
                         implicitHeight: 32
                         radius: Theme.radiusSmall
-                        color: engine.targetClassIds.includes(index) ? Theme.accentDim : Theme.bgInput
-                        border.color: engine.targetClassIds.includes(index) ? Theme.accent : Theme.border
+                        color: engine.config.targetClassIds.includes(index) ? Theme.accentDim : Theme.bgInput
+                        border.color: engine.config.targetClassIds.includes(index) ? Theme.accent : Theme.border
                         border.width: 1
 
                         Label {
                             anchors.centerIn: parent
                             text: "Class " + index
                             font.pixelSize: Theme.fontSmall
-                            color: engine.targetClassIds.includes(index) ? Theme.accent : Theme.textSecondary
+                            color: engine.config.targetClassIds.includes(index) ? Theme.accent : Theme.textSecondary
                         }
 
                         MouseArea {
                             anchors.fill: parent
                             cursorShape: Qt.PointingHandCursor
-                            onClicked: engine.setTargetClass(index, !engine.targetClassIds.includes(index))
+                            onClicked: engine.setTargetClass(index, !engine.config.targetClassIds.includes(index))
                         }
                     }
                 }
@@ -145,6 +145,21 @@ Flickable {
             if (path.indexOf("file:///") === 0) path = path.substring(8)
             if (Qt.platform.os === "windows") path = path.replace(/\//g, "\\")
             engine.loadModel(path)
+        }
+    }
+
+    // 错误弹窗
+    MessageDialog {
+        id: errorDialog
+        title: "\u6A21\u578B\u52A0\u8F7D\u5931\u8D25"
+        buttons: MessageDialog.Ok
+    }
+
+    Connections {
+        target: engine
+        function onErrorOccurred(message) {
+            errorDialog.text = message
+            errorDialog.open()
         }
     }
 }

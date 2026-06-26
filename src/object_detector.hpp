@@ -68,6 +68,7 @@ private:
     void SaveEngineToFile(const std::string& enginePath, const nvinfer1::IHostMemory* serialized);
     void CreateExecutionContext();
     void AllocateBuffers();
+    void ReleaseBuffers();
     void QueryModelInfo();
 
     // 前处理 / 推理 / 后处理

@@ -9,6 +9,9 @@ ScreenCapturer::~ScreenCapturer() {
 }
 
 bool ScreenCapturer::Initialize(int captureSize) {
+    // 先释放旧资源，防止重复初始化时泄漏 DXGI 资源
+    Shutdown();
+
     capture_size_ = captureSize;
 
     if (!CreateDXGIFactory()) {

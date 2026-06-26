@@ -22,6 +22,10 @@ Rectangle {
         if (keyCode > 0) keyName = formatVkKey(keyCode)
     }
 
+    onKeyCodeChanged: {
+        if (keyCode > 0) keyName = formatVkKey(keyCode)
+    }
+
     Label {
         anchors.centerIn: parent
         text: root.capturing ? "\u6309\u4E0B\u4EFB\u610F\u952E..." : root.keyName

@@ -39,11 +39,11 @@ ColumnLayout {
         }
     }
 
-    // 帧预览区 —— 固定为采集尺寸 × 采集尺寸（1:1 像素映射）
+    // 帧预览区 —— 固定显示尺寸（不随采集尺寸变化），仅弹出窗口跟随采集尺寸
     Rectangle {
         Layout.alignment: Qt.AlignHCenter
-        width: engine.config.captureSize
-        height: engine.config.captureSize
+        Layout.preferredWidth: 320
+        Layout.preferredHeight: 320
         radius: Theme.radiusLarge
         color: "#000000"
         clip: true
@@ -99,7 +99,7 @@ ColumnLayout {
                 var dets = engine.detections
                 if (!dets || dets.length === 0) return
 
-                var targetClasses = engine.targetClassIds
+                var targetClasses = engine.config.targetClassIds
                 var fovRN = aimRange * 0.5
                 var aimYRatio = engine.config.targetYRatio
 
@@ -142,6 +142,17 @@ ColumnLayout {
             }
         }
 
+        // 采集尺寸标签
+        Label {
+            anchors.left: parent.left
+            anchors.bottom: parent.bottom
+            anchors.margins: 6
+            font.pixelSize: 11
+            font.family: "Consolas"
+            color: "#FFFF00"
+            text: "CS: " + engine.config.captureSize
+        }
+
         // 占位提示
         Label {
             visible: !engine.running
@@ -176,14 +187,22 @@ ColumnLayout {
                     Layout.fillWidth: true
                     label: "\u91C7\u96C6\u5C3A\u5BF8"
                     model: ["256", "320", "480", "640"]
-                    currentIndex: {
+                    Component.onCompleted: {
                         var sizes = [256, 320, 480, 640]
                         var idx = sizes.indexOf(engine.config.captureSize)
-                        return idx >= 0 ? idx : 3
+                        captureSizeCombo.currentIndex = idx >= 0 ? idx : 3
                     }
                     onActivated: {
                         var sizes = [256, 320, 480, 640]
                         engine.config.captureSize = sizes[index]
+                    }
+                    Connections {
+                        target: engine.config
+                        function onCaptureSizeChanged() {
+                            var sizes = [256, 320, 480, 640]
+                            var idx = sizes.indexOf(engine.config.captureSize)
+                            if (idx >= 0) captureSizeCombo.currentIndex = idx
+                        }
                     }
                 }
             }

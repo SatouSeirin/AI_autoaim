@@ -35,19 +35,25 @@ ObjectDetector::ObjectDetector() {
 }
 
 ObjectDetector::~ObjectDetector() {
-    // unique_ptr 自动 delete，无需手动 destroy()
+    ReleaseBuffers();
+}
 
-    if (host_input_)  cudaFreeHost(host_input_);
-    if (host_output_) cudaFreeHost(host_output_);
-    if (input_d_)     cudaFree(input_d_);
-    if (output_d_)    cudaFree(output_d_);
+void ObjectDetector::ReleaseBuffers() {
+    // 释放执行上下文（必须在 engine 之前）
+    context_.reset();
 
-    if (stream_)      cudaStreamDestroy(stream_);
+    // 释放 CUDA 缓冲区
+    if (host_input_)  { cudaFreeHost(host_input_);  host_input_ = nullptr; }
+    if (host_output_) { cudaFreeHost(host_output_); host_output_ = nullptr; }
+    if (input_d_)     { cudaFree(input_d_);         input_d_ = nullptr; }
+    if (output_d_)    { cudaFree(output_d_);         output_d_ = nullptr; }
 
-    host_input_  = nullptr;
-    host_output_ = nullptr;
-    input_d_     = nullptr;
-    output_d_    = nullptr;
+    // 释放 CUDA 流
+    if (stream_) { cudaStreamDestroy(stream_); stream_ = nullptr; }
+
+    // 释放 TensorRT 组件（顺序：context → engine → runtime）
+    engine_.reset();
+    runtime_.reset();
 }
 
 // ============================================================
@@ -59,6 +65,9 @@ bool ObjectDetector::LoadModel(const std::string& modelPath, const AimConfig& co
         std::cerr << "[Detector] Empty model path" << std::endl;
         return false;
     }
+
+    // 释放旧模型资源，防止 GPU 内存泄漏
+    ReleaseBuffers();
 
     for (char c : modelPath) {
         if (static_cast<unsigned char>(c) > 127) {
@@ -110,6 +119,9 @@ bool ObjectDetector::LoadEngineFile(const std::string& enginePath, const AimConf
             return false;
         }
     }
+
+    // 释放旧模型资源，防止 GPU 内存泄漏
+    ReleaseBuffers();
 
     config_ = config;
 
@@ -209,6 +221,11 @@ void ObjectDetector::QueryModelInfo() {
 // GPU 缓冲区分配
 // ============================================================
 void ObjectDetector::AllocateBuffers() {
+    // 确保 CUDA 流存在（ReleaseBuffers 会将其置空）
+    if (!stream_) {
+        cudaStreamCreate(&stream_);
+    }
+
     size_t inputSize  = input_c_ * input_h_ * input_w_ * sizeof(float);
     size_t outputSize = output_size_ * sizeof(float);
 

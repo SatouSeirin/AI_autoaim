@@ -60,6 +60,7 @@ struct AimConfig {
     bool enable_visualization   = true;
     bool show_infer_latency     = true;
     bool draw_detection_boxes   = true;
+    bool draw_aim_on_preview   = true;
     bool debug_window_enabled   = false;
     std::string window_name = "AutoAim v2.1";
 

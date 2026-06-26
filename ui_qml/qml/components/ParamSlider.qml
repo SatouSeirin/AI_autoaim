@@ -56,8 +56,9 @@ ColumnLayout {
         stepSize: root.stepSize
 
         onValueChanged: {
-            root.value = value
-            root.valueModified(value)
+            if (slider.pressed || slider.dragging) {
+                root.valueModified(value)
+            }
         }
 
         // 轨道样式

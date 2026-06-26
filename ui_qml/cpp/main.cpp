@@ -7,6 +7,9 @@
 #include <QDir>
 #include <QFileInfo>
 #include <QCommandLineParser>
+#include <windows.h>
+#include <io.h>
+#include <fcntl.h>
 
 #include "engineviewmodel.h"
 #include "frameprovider.h"
@@ -17,6 +20,13 @@
 // MiniSense v2.1 — QML UI 入口
 // ============================================================
 int main(int argc, char* argv[]) {
+    // 分配调试控制台
+    AllocConsole();
+    FILE* fp;
+    freopen_s(&fp, "CONOUT$", "w", stdout);
+    freopen_s(&fp, "CONOUT$", "w", stderr);
+    setvbuf(stdout, NULL, _IONBF, 0);  // 禁用缓冲，立即输出
+
     // 高 DPI 支持
     QGuiApplication::setHighDpiScaleFactorRoundingPolicy(
         Qt::HighDpiScaleFactorRoundingPolicy::PassThrough);

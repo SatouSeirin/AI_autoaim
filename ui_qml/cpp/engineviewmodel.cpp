@@ -14,6 +14,16 @@ EngineViewModel::EngineViewModel(FrameProvider* frameProvider, QObject* parent)
     m_config->fromAimConfig(cfg);
     m_engine->SetConfig(cfg);
 
+    // 自动加载上次保存的模型（延迟到事件循环启动后，确保 QML 已就绪）
+    if (!cfg.model_path.empty()) {
+        QString modelPath = QString::fromStdString(cfg.model_path);
+        if (QFileInfo::exists(modelPath)) {
+            QTimer::singleShot(0, this, [this, modelPath]() {
+                loadModel(modelPath);
+            });
+        }
+    }
+
     // 配置变更防抖（200ms）
     m_configDebounceTimer = new QTimer(this);
     m_configDebounceTimer->setSingleShot(true);
@@ -133,23 +143,56 @@ void EngineViewModel::applyConfig() {
     syncConfigToEngine();
 }
 
+void EngineViewModel::resetConfig() {
+    AimConfig defaultCfg;
+    m_config->fromAimConfig(defaultCfg);
+    syncConfigToEngine();
+    emit targetClassesChanged();
+}
+
 bool EngineViewModel::saveProfile(const QString& filepath) {
     AimConfig cfg = m_config->toAimConfig();
+    std::cout << "[EngineVM] saveProfile: targetClassIds=[";
+    for (size_t i = 0; i < cfg.target_class_ids.size(); i++) {
+        if (i > 0) std::cout << ",";
+        std::cout << cfg.target_class_ids[i];
+    }
+    std::cout << "] captureSize=" << cfg.capture_size << std::endl;
     return ConfigManager::Save(cfg, filepath.toStdString());
 }
 
 bool EngineViewModel::loadProfile(const QString& filepath) {
     AimConfig cfg = ConfigManager::Load(filepath.toStdString());
-    if (cfg.model_path.empty() && m_config->modelPath().isEmpty()) {
-        // 可能是空配置或加载失败
-    }
     m_config->fromAimConfig(cfg);
     syncConfigToEngine();
+    emit targetClassesChanged();
+
+    // 实际加载模型（先停止推理）
+    if (!cfg.model_path.empty()) {
+        QString modelPath = QString::fromStdString(cfg.model_path);
+        if (QFileInfo::exists(modelPath)) {
+            if (m_engine && m_engine->IsRunning()) {
+                m_engine->Stop();
+                emit runningChanged();
+                emit statusTextChanged();
+            }
+            loadModel(modelPath);
+        }
+    }
+
+    // 提取文件名用于提示
+    QString fileName = QFileInfo(filepath).fileName();
+    emit profileLoaded(true, QString("配置已加载: %1").arg(fileName));
     return true;
 }
 
 void EngineViewModel::setTargetClass(int classId, bool enabled) {
     QVariantList classes = m_config->targetClassIds();
+    std::cout << "[EngineVM] setTargetClass(" << classId << ", " << (enabled ? "true" : "false")
+              << ") before=[";
+    for (const auto& v : classes) std::cout << v.toInt() << " ";
+    std::cout << "]" << std::endl;
+
     if (enabled) {
         if (!classes.contains(classId)) {
             classes.append(classId);
@@ -230,7 +273,10 @@ void EngineViewModel::syncConfigToEngine() {
 
     // 检测采集尺寸变更，需要单独调用 SetCaptureSize
     AimConfig currentCfg = m_engine->GetConfig();
+    std::cout << "[EngineVM] syncConfigToEngine: qmlCaptureSize=" << cfg.capture_size
+              << " engineCaptureSize=" << currentCfg.capture_size << std::endl;
     if (cfg.capture_size != currentCfg.capture_size) {
+        std::cout << "[EngineVM] Calling SetCaptureSize(" << cfg.capture_size << ")" << std::endl;
         m_engine->SetCaptureSize(cfg.capture_size);
     }
 

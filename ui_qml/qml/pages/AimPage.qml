@@ -171,7 +171,16 @@ Flickable {
                         }
 
                         onRatioChanged: {
-                            engine.config.targetYRatio = ratio
+                            if (!_syncing) {
+                                engine.config.targetYRatio = ratio
+                            }
+                        }
+
+                        Connections {
+                            target: engine.config
+                            function onTargetYRatioChanged() {
+                                targetSelector.syncFromConfig(engine.config.targetYRatio)
+                            }
                         }
                     }
 

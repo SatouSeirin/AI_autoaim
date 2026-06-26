@@ -85,22 +85,31 @@ AimConfig ConfigManager::Load(const std::string& filepath) {
     cfg.confidence_threshold  = static_cast<float>(getDouble(json, "confidence_threshold", 0.5));
     cfg.nms_threshold         = static_cast<float>(getDouble(json, "nms_threshold", 0.4));
     cfg.capture_size          = getInt(json, "capture_size", 640);
-    // target_class_ids: 数组格式 "[0,1,2]" 或兼容旧格式单个 int
+    // target_class_ids: 数组格式 "[0, 1, 2]" 或兼容旧格式单个 int
     {
-        auto idsStr = getStr(json, "target_class_ids");
-        if (!idsStr.empty()) {
-            // 新格式: JSON 数组 "[0,1,2]"
-            cfg.target_class_ids.clear();
-            std::string num;
-            for (char c : idsStr) {
-                if (c >= '0' && c <= '9') {
-                    num += c;
-                } else if (!num.empty()) {
-                    cfg.target_class_ids.push_back(std::stoi(num));
-                    num.clear();
+        // 不能用 getStr（它在第一个逗号处截断，无法处理数组）
+        // 手动查找 [ ... ] 区间
+        std::string key_search = "\"target_class_ids\"";
+        auto key_pos = json.find(key_search);
+        if (key_pos != std::string::npos) {
+            auto bracket_start = json.find('[', key_pos + key_search.size());
+            if (bracket_start != std::string::npos) {
+                auto bracket_end = json.find(']', bracket_start);
+                if (bracket_end != std::string::npos) {
+                    std::string idsStr = json.substr(bracket_start + 1, bracket_end - bracket_start - 1);
+                    cfg.target_class_ids.clear();
+                    std::string num;
+                    for (char c : idsStr) {
+                        if (c >= '0' && c <= '9') {
+                            num += c;
+                        } else if (!num.empty()) {
+                            cfg.target_class_ids.push_back(std::stoi(num));
+                            num.clear();
+                        }
+                    }
+                    if (!num.empty()) cfg.target_class_ids.push_back(std::stoi(num));
                 }
             }
-            if (!num.empty()) cfg.target_class_ids.push_back(std::stoi(num));
         } else {
             // 兼容旧格式: 单个 int "target_class_id"
             int oldVal = getInt(json, "target_class_id", -1);
@@ -115,8 +124,10 @@ AimConfig ConfigManager::Load(const std::string& filepath) {
     cfg.aim_range_size        = getInt(json, "aim_range_size", 21);
     cfg.aim_range_circle      = getBool(json, "aim_range_circle", true);
     cfg.kp                    = getDouble(json, "kp", 0.25);
-    cfg.ki                    = getDouble(json, "ki", 0.0008);
+    cfg.ki                    = getDouble(json, "ki", 0.0);
      cfg.kd                    = getDouble(json, "kd", 0.08);
+    cfg.kalman_prediction_steps = getInt(json, "kalman_prediction_steps", 3);
+    cfg.sensitivity            = getDouble(json, "sensitivity", 0.15);
     cfg.aim_key               = getInt(json, "aim_key", 0x02);
     cfg.exit_key              = getInt(json, "exit_key", 0x71);
     cfg.switch_target_key     = getInt(json, "switch_target_key", 0x06);
@@ -137,13 +148,23 @@ AimConfig ConfigManager::Load(const std::string& filepath) {
     cfg.enable_visualization  = getBool(json, "enable_visualization", true);
     cfg.show_infer_latency    = getBool(json, "show_infer_latency", true);
     cfg.draw_detection_boxes  = getBool(json, "draw_detection_boxes", true);
+    cfg.draw_aim_on_preview  = getBool(json, "draw_aim_on_preview", true);
     cfg.debug_window_enabled  = getBool(json, "debug_window_enabled", false);
+    cfg.window_name           = getStr(json, "window_name");
+    if (cfg.window_name.empty()) cfg.window_name = "AutoAim v2.1";
     cfg.auto_start            = getBool(json, "auto_start", false);
     cfg.minimize_to_tray      = getBool(json, "minimize_to_tray", true);
     cfg.language              = getStr(json, "language");
     if (cfg.language.empty()) cfg.language = "zh-CN";
 
     std::cout << "[Config] Loaded from " << filepath << std::endl;
+    std::cout << "[Config]   capture_size=" << cfg.capture_size << std::endl;
+    std::cout << "[Config]   target_class_ids=[";
+    for (size_t i = 0; i < cfg.target_class_ids.size(); i++) {
+        if (i > 0) std::cout << ",";
+        std::cout << cfg.target_class_ids[i];
+    }
+    std::cout << "]" << std::endl;
     return cfg;
 }
 
@@ -174,6 +195,8 @@ bool ConfigManager::Save(const AimConfig& cfg, const std::string& filepath) {
     f << "  \"kp\": "                      << cfg.kp << ",\n";
      f << "  \"kd\": "                      << cfg.kd << ",\n";
     f << "  \"ki\": "                      << cfg.ki << ",\n";
+    f << "  \"kalman_prediction_steps\": " << cfg.kalman_prediction_steps << ",\n";
+    f << "  \"sensitivity\": "             << cfg.sensitivity << ",\n";
     f << "  \"aim_key\": "                 << cfg.aim_key << ",\n";
     f << "  \"exit_key\": "                << cfg.exit_key << ",\n";
     f << "  \"switch_target_key\": "       << cfg.switch_target_key << ",\n";
@@ -189,7 +212,9 @@ bool ConfigManager::Save(const AimConfig& cfg, const std::string& filepath) {
     f << "  \"enable_visualization\": "    << (cfg.enable_visualization ? "true" : "false") << ",\n";
     f << "  \"show_infer_latency\": "      << (cfg.show_infer_latency ? "true" : "false") << ",\n";
     f << "  \"draw_detection_boxes\": "    << (cfg.draw_detection_boxes ? "true" : "false") << ",\n";
+    f << "  \"draw_aim_on_preview\": "    << (cfg.draw_aim_on_preview ? "true" : "false") << ",\n";
     f << "  \"debug_window_enabled\": "    << (cfg.debug_window_enabled ? "true" : "false") << ",\n";
+    f << "  \"window_name\": \""           << EscapeJson(cfg.window_name) << "\",\n";
     f << "  \"auto_start\": "              << (cfg.auto_start ? "true" : "false") << ",\n";
     f << "  \"minimize_to_tray\": "        << (cfg.minimize_to_tray ? "true" : "false") << ",\n";
     f << "  \"language\": \""              << EscapeJson(cfg.language) << "\"\n";

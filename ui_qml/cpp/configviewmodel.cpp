@@ -1,4 +1,5 @@
 #include "configviewmodel.h"
+#include <iostream>
 
 ConfigViewModel::ConfigViewModel(QObject* parent)
     : QObject(parent) {
@@ -44,6 +45,7 @@ AimConfig ConfigViewModel::toAimConfig() const {
     cfg.enable_visualization = m_enableVisualization;
     cfg.show_infer_latency = m_showInferLatency;
     cfg.draw_detection_boxes = m_drawDetectionBoxes;
+    cfg.draw_aim_on_preview = m_drawAimOnPreview;
     cfg.debug_window_enabled = m_debugWindowEnabled;
     cfg.auto_start = m_autoStart;
     cfg.minimize_to_tray = m_minimizeToTray;
@@ -52,6 +54,21 @@ AimConfig ConfigViewModel::toAimConfig() const {
 }
 
 void ConfigViewModel::fromAimConfig(const AimConfig& cfg) {
+    std::cout << "[ConfigVM] fromAimConfig loading:" << std::endl;
+    std::cout << "  captureSize=" << cfg.capture_size << std::endl;
+    std::cout << "  kp=" << cfg.kp << " ki=" << cfg.ki << " kd=" << cfg.kd << std::endl;
+    std::cout << "  sensitivity=" << cfg.sensitivity << " predictionSteps=" << cfg.kalman_prediction_steps << std::endl;
+    std::cout << "  aimRangeSize=" << cfg.aim_range_size << " aimRangeCircle=" << cfg.aim_range_circle << std::endl;
+    std::cout << "  targetYRatio=" << cfg.target_y_ratio << " targetBodyPart=" << cfg.target_body_part << std::endl;
+    std::cout << "  aimKey=0x" << std::hex << cfg.aim_key << " exitKey=0x" << cfg.exit_key
+              << " switchTargetKey=0x" << cfg.switch_target_key << " startStopKey=0x" << cfg.start_stop_key << std::dec << std::endl;
+    std::cout << "  targetClassIds=[";
+    for (size_t i = 0; i < cfg.target_class_ids.size(); i++) {
+        if (i > 0) std::cout << ",";
+        std::cout << cfg.target_class_ids[i];
+    }
+    std::cout << "]" << std::endl;
+
     m_modelPath = QString::fromStdString(cfg.model_path);
     m_enableFp16 = cfg.enable_fp16;
     m_confThreshold = cfg.confidence_threshold;
@@ -87,6 +104,7 @@ void ConfigViewModel::fromAimConfig(const AimConfig& cfg) {
     m_enableVisualization = cfg.enable_visualization;
     m_showInferLatency = cfg.show_infer_latency;
     m_drawDetectionBoxes = cfg.draw_detection_boxes;
+    m_drawAimOnPreview = cfg.draw_aim_on_preview;
     m_debugWindowEnabled = cfg.debug_window_enabled;
     m_autoStart = cfg.auto_start;
     m_minimizeToTray = cfg.minimize_to_tray;

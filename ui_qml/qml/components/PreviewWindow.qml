@@ -93,7 +93,7 @@ Window {
                 var dets = engine.detections
                 if (!dets || dets.length === 0) return
 
-                var targetClasses = engine.targetClassIds
+                var targetClasses = engine.config.targetClassIds
                 var fovRN = aimRange * 0.5
                 var aimYRatio = engine.config.targetYRatio
 

@@ -19,6 +19,7 @@
         <file>qml/components/StatusIndicator.qml</file>
         <file>qml/components/PreviewWindow.qml</file>
         <file>qml/components/TargetSelector.qml</file>
+        <file>qml/components/Toast.qml</file>
 
         <!-- Pages -->
         <file>qml/pages/ModelPage.qml</file>

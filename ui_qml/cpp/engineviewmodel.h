@@ -48,6 +48,7 @@ public:
     Q_INVOKABLE void toggleRunning();
     Q_INVOKABLE void loadModel(const QString& path);
     Q_INVOKABLE void applyConfig();
+    Q_INVOKABLE void resetConfig();
     Q_INVOKABLE bool saveProfile(const QString& filepath);
     Q_INVOKABLE bool loadProfile(const QString& filepath);
     Q_INVOKABLE void setTargetClass(int classId, bool enabled);
@@ -80,6 +81,7 @@ signals:
     void errorOccurred(const QString& message);
     void modelLoadStarted();
     void modelLoadFinished(bool success);
+    void profileLoaded(bool success, const QString& message);
 
 private slots:
     void onConfigDirty();
