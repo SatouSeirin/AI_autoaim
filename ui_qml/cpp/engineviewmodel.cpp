@@ -2,6 +2,7 @@
 #include "../../src/config_manager.hpp"
 #include <QFileInfo>
 #include <QMetaObject>
+#include <QThread>
 
 EngineViewModel::EngineViewModel(FrameProvider* frameProvider, QObject* parent)
     : QObject(parent)
@@ -115,28 +116,39 @@ void EngineViewModel::toggleRunning() {
 }
 
 void EngineViewModel::loadModel(const QString& path) {
-    if (!m_engine) return;
+    if (!m_engine || m_modelLoading) return;
 
+    m_modelLoading = true;
+    emit modelLoadingChanged();
     emit modelLoadStarted();
     m_currentModelName = QFileInfo(path).fileName();
+    emit currentModelNameChanged();
 
-    bool ok = false;
-    if (path.endsWith(".engine", Qt::CaseInsensitive)) {
-        ok = m_engine->LoadEngineFile(path.toStdString());
-    } else {
-        ok = m_engine->LoadModel(path.toStdString());
-    }
+    // 异步加载，避免 ONNX/TensorRT 构建阻塞 UI 线程（首次可能 30-60s）
+    QThread::create([this, path]() {
+        bool ok = false;
+        if (path.endsWith(".engine", Qt::CaseInsensitive)) {
+            ok = m_engine->LoadEngineFile(path.toStdString());
+        } else {
+            ok = m_engine->LoadModel(path.toStdString());
+        }
 
-    if (ok) {
-        m_config->setModelPath(path);
-        emit currentModelNameChanged();
-        emit modelLoadedChanged();
-    } else {
-        m_lastError = QString::fromStdString(m_engine->GetLastError());
-        emit lastErrorChanged();
-        emit errorOccurred(m_lastError);
-    }
-    emit modelLoadFinished(ok);
+        // 回到主线程发射信号
+        QMetaObject::invokeMethod(this, [this, ok, path]() {
+            m_modelLoading = false;
+            emit modelLoadingChanged();
+            if (ok) {
+                m_config->setModelPath(path);
+                emit currentModelNameChanged();
+                emit modelLoadedChanged();
+            } else {
+                m_lastError = QString::fromStdString(m_engine->GetLastError());
+                emit lastErrorChanged();
+                emit errorOccurred(m_lastError);
+            }
+            emit modelLoadFinished(ok);
+        }, Qt::QueuedConnection);
+    })->start();
 }
 
 void EngineViewModel::applyConfig() {
@@ -237,6 +249,37 @@ void EngineViewModel::testMove(const QString& direction) {
     else if (direction == "left")  dx = -20;
     else if (direction == "right") dx = 20;
     m_engine->MoveMouseRelative(dx, dy);
+}
+
+bool EngineViewModel::connectKMBox() {
+    if (!m_engine) return false;
+
+    // 异步连接，避免阻塞 UI 线程
+    QThread::create([this]() {
+        bool ok = m_engine->ConnectKMBox();
+        // 回到主线程发射信号
+        QMetaObject::invokeMethod(this, [this, ok]() {
+            emit kmboxConnectedChanged();
+            if (ok) {
+                emit kmboxConnectionResult(true, "KMBoxNet 连接成功");
+            } else {
+                emit kmboxConnectionResult(false, "KMBoxNet 连接失败");
+            }
+        }, Qt::QueuedConnection);
+    })->start();
+
+    return true;
+}
+
+void EngineViewModel::disconnectKMBox() {
+    if (!m_engine) return;
+    m_engine->DisconnectKMBox();
+    emit kmboxConnectedChanged();
+}
+
+bool EngineViewModel::isKmboxConnected() const {
+    if (!m_engine) return false;
+    return m_engine->IsKMBoxConnected();
 }
 
 // ── 内部槽 ──

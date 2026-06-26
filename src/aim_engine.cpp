@@ -40,6 +40,8 @@ bool AimEngine::LoadModel(const std::string& modelPath) {
         std::cout << "[Engine] Stopping engine before loading new model..." << std::endl;
         Stop();
     }
+
+    // 检查路径是否有中文（短暂持锁）
     {
         std::lock_guard<std::mutex> lock(config_mutex_);
         for (char c : modelPath) {
@@ -50,17 +52,20 @@ bool AimEngine::LoadModel(const std::string& modelPath) {
             }
         }
         config_.model_path = modelPath;
-        if (!detector_.LoadModel(modelPath, config_)) {
-            std::cerr << "[Engine] Model load failed: " << detector_.GetLastError() << std::endl;
-            return false;
-        }
-        if (!capturer_.Initialize(config_.capture_size)) {
-            std::cerr << "[Engine] Screen capturer init failed" << std::endl;
-            return false;
-        }
-        mouse_.Init(MouseBackend::SendInput);
-        std::cout << "[Engine] Model loaded & ready. Model=" << modelPath << std::endl;
     }
+
+    // 执行耗时的模型加载（不持锁，允许 UI 线程访问配置）
+    if (!detector_.LoadModel(modelPath, config_)) {
+        std::cerr << "[Engine] Model load failed: " << detector_.GetLastError() << std::endl;
+        return false;
+    }
+    if (!capturer_.Initialize(config_.capture_size)) {
+        std::cerr << "[Engine] Screen capturer init failed" << std::endl;
+        return false;
+    }
+    mouse_.Init(config_.mouse_backend);
+    std::cout << "[Engine] Model loaded & ready. Model=" << modelPath << std::endl;
+
     if (wasRunning) {
         std::cout << "[Engine] Restarting engine after model switch..." << std::endl;
         Start();
@@ -77,6 +82,8 @@ bool AimEngine::LoadEngineFile(const std::string& enginePath) {
         std::cout << "[Engine] Stopping engine before loading new engine..." << std::endl;
         Stop();
     }
+
+    // 检查路径是否有中文（短暂持锁）
     {
         std::lock_guard<std::mutex> lock(config_mutex_);
         for (char c : enginePath) {
@@ -86,17 +93,20 @@ bool AimEngine::LoadEngineFile(const std::string& enginePath) {
             }
         }
         config_.model_path = enginePath;
-        if (!detector_.LoadEngineFile(enginePath, config_)) {
-            std::cerr << "[Engine] Engine load failed: " << detector_.GetLastError() << std::endl;
-            return false;
-        }
-        if (!capturer_.Initialize(config_.capture_size)) {
-            std::cerr << "[Engine] Screen capturer init failed" << std::endl;
-            return false;
-        }
-        mouse_.Init(MouseBackend::SendInput);
-        std::cout << "[Engine] Engine loaded & ready. Engine=" << enginePath << std::endl;
     }
+
+    // 执行耗时的引擎加载（不持锁，允许 UI 线程访问配置）
+    if (!detector_.LoadEngineFile(enginePath, config_)) {
+        std::cerr << "[Engine] Engine load failed: " << detector_.GetLastError() << std::endl;
+        return false;
+    }
+    if (!capturer_.Initialize(config_.capture_size)) {
+        std::cerr << "[Engine] Screen capturer init failed" << std::endl;
+        return false;
+    }
+    mouse_.Init(config_.mouse_backend);
+    std::cout << "[Engine] Engine loaded & ready. Engine=" << enginePath << std::endl;
+
     if (wasRunning) {
         std::cout << "[Engine] Restarting engine after engine switch..." << std::endl;
         Start();
@@ -363,4 +373,31 @@ void AimEngine::RunLoop() {
             break;
         }
     }
+}
+
+// ============================================================
+// KMBoxNet 连接控制
+// ============================================================
+
+bool AimEngine::ConnectKMBox() {
+    // 先复制配置值（持锁时间最短）
+    std::string ip, port, mac;
+    bool encrypt;
+    {
+        std::lock_guard<std::mutex> lock(config_mutex_);
+        ip = config_.kmbox_ip;
+        port = config_.kmbox_port;
+        mac = config_.kmbox_mac;
+        encrypt = config_.kmbox_encrypt;
+    }
+    // 在锁外执行阻塞的 UDP 连接
+    return mouse_.InitKMBox(ip, port, mac, encrypt);
+}
+
+void AimEngine::DisconnectKMBox() {
+    mouse_.Disconnect();
+}
+
+bool AimEngine::IsKMBoxConnected() const {
+    return mouse_.IsConnected();
 }

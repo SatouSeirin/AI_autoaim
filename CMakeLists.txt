@@ -48,6 +48,8 @@ set(ENGINE_SOURCES
     src/hotkey_manager.cpp
     src/pid_controller.cpp
     src/kalman_tracker.cpp
+    ${KMBOX_ROOT}/kmboxNet.cpp
+    ${KMBOX_ROOT}/my_enc.cpp
 )
 
 set(ENGINE_HEADERS
@@ -71,6 +73,7 @@ target_include_directories(aim_engine PUBLIC
     ${ONNXRUNTIME_ROOT}/include
     ${OpenCV_INCLUDE_DIRS}
     ${CUDA_INCLUDE_DIR}
+    ${KMBOX_ROOT}
 )
 target_compile_definitions(aim_engine PRIVATE NOMINMAX)
 target_compile_options(aim_engine PRIVATE /utf-8)

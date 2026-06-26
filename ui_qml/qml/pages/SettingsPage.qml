@@ -195,13 +195,30 @@ Flickable {
                             }
                         }
 
+                        RowLayout {
+                            spacing: 8
+                            // 连接状态指示灯
+                            Rectangle {
+                                width: 10; height: 10; radius: 5
+                                color: engine.kmboxConnected ? Theme.success : Theme.error
+                            }
+                            Label {
+                                text: engine.kmboxConnected ? "已连接" : "未连接"
+                                font.pixelSize: Theme.fontSmall
+                                color: engine.kmboxConnected ? Theme.success : Theme.textMuted
+                            }
+                        }
+
                         ButtonStyled {
                             Layout.fillWidth: true
-                            text: "\u8FDE\u63A5 KMBoxNet"
-                            type: "primary"
+                            text: engine.kmboxConnected ? "断开连接" : "连接 KMBoxNet"
+                            type: engine.kmboxConnected ? "danger" : "primary"
                             onClicked: {
-                                // 触发配置同步
-                                engine.applyConfig()
+                                if (engine.kmboxConnected) {
+                                    engine.disconnectKMBox()
+                                } else {
+                                    engine.connectKMBox()
+                                }
                             }
                         }
                     }

@@ -55,10 +55,12 @@ ApplicationWindow {
                     }
 
                     Label {
-                        text: engine.modelLoaded ? engine.currentModelName :
+                        text: engine.modelLoading ? "模型加载中..." :
+                              engine.modelLoaded ? engine.currentModelName :
                                                    "尚未导入模型"
                         font.pixelSize: Theme.fontSmall
-                        color: engine.modelLoaded ? Theme.success : Theme.textMuted
+                        color: engine.modelLoading ? Theme.warning :
+                              engine.modelLoaded ? Theme.success : Theme.textMuted
                     }
 
                     Item { Layout.fillWidth: true }
@@ -106,6 +108,9 @@ ApplicationWindow {
     Connections {
         target: engine
         function onProfileLoaded(success, message) {
+            toast.show(message, success ? "success" : "error")
+        }
+        function onKmboxConnectionResult(success, message) {
             toast.show(message, success ? "success" : "error")
         }
     }

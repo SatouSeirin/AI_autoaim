@@ -26,6 +26,8 @@ class EngineViewModel : public QObject {
     Q_PROPERTY(QVariantList targetClassIds READ targetClassIds NOTIFY targetClassesChanged)
     Q_PROPERTY(QVariantList detections READ detections NOTIFY detectionsChanged)
     Q_PROPERTY(bool hotkeyCapturing READ isHotkeyCapturing WRITE setHotkeyCapturing NOTIFY hotkeyCapturingChanged)
+    Q_PROPERTY(bool kmboxConnected READ isKmboxConnected NOTIFY kmboxConnectedChanged)
+    Q_PROPERTY(bool modelLoading READ isModelLoading NOTIFY modelLoadingChanged)
 
 public:
     explicit EngineViewModel(FrameProvider* frameProvider, QObject* parent = nullptr);
@@ -54,6 +56,10 @@ public:
     Q_INVOKABLE void setTargetClass(int classId, bool enabled);
     Q_INVOKABLE bool isTargetClassEnabled(int classId) const;
     Q_INVOKABLE void testMove(const QString& direction);
+    Q_INVOKABLE bool connectKMBox();
+    Q_INVOKABLE void disconnectKMBox();
+    bool isKmboxConnected() const;
+    bool isModelLoading() const { return m_modelLoading; }
 
     // 新增属性读取
     QVariantList targetClassIds() const;
@@ -78,10 +84,13 @@ signals:
     void targetClassesChanged();
     void detectionsChanged();
     void hotkeyCapturingChanged();
+    void kmboxConnectedChanged();
     void errorOccurred(const QString& message);
     void modelLoadStarted();
     void modelLoadFinished(bool success);
     void profileLoaded(bool success, const QString& message);
+    void kmboxConnectionResult(bool success, const QString& message);
+    void modelLoadingChanged();
 
 private slots:
     void onConfigDirty();
@@ -99,4 +108,5 @@ private:
     QString m_currentModelName;
     QString m_lastError;
     bool m_hotkeyCapturing = false;
+    bool m_modelLoading = false;
 };

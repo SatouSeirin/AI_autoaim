@@ -47,19 +47,28 @@ Flickable {
 
                     Rectangle {
                         width: 8; height: 8; radius: 4
-                        color: engine.modelLoaded ? Theme.success : Theme.textMuted
+                        color: engine.modelLoading ? Theme.warning
+                             : engine.modelLoaded ? Theme.success : Theme.textMuted
+                        SequentialAnimation on opacity {
+                            running: engine.modelLoading
+                            loops: Animation.Infinite
+                            NumberAnimation { to: 0.3; duration: 500 }
+                            NumberAnimation { to: 1.0; duration: 500 }
+                        }
                     }
                     Label {
-                        text: engine.modelLoaded ? engine.currentModelName : "\u672A\u5BFC\u5165\u6A21\u578B"
+                        text: engine.modelLoading ? "\u6A21\u578B\u52A0\u8F7D\u4E2D..."
+                              : engine.modelLoaded ? engine.currentModelName : "\u672A\u5BFC\u5165\u6A21\u578B"
                         font.pixelSize: Theme.fontMedium
-                        color: engine.modelLoaded ? Theme.textPrimary : Theme.textMuted
+                        color: engine.modelLoading ? Theme.warning
+                              : engine.modelLoaded ? Theme.textPrimary : Theme.textMuted
                         Layout.fillWidth: true
                     }
                     ButtonStyled {
                         text: engine.running ? "\u505C\u6B62" : "\u5F00\u59CB"
                         type: engine.running ? "danger" : "primary"
                         onClicked: engine.toggleRunning()
-                        enabled: engine.modelLoaded
+                        enabled: engine.modelLoaded && !engine.modelLoading
                     }
                 }
             }

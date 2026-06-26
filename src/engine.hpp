@@ -67,6 +67,11 @@ public:
     // ── 测试鼠标移动（供 UI 测试按钮调用）──
     void MoveMouseRelative(double dx, double dy);
 
+    // ── KMBoxNet 连接控制 ──
+    bool ConnectKMBox();
+    void DisconnectKMBox();
+    bool IsKMBoxConnected() const;
+
 private:
     void RunLoop();       // 推理线程主循环
 
