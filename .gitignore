@@ -3,6 +3,7 @@ build/
 build_v2.0/
 *.exe
 *.dll
+!IbInputSimulator.dll
 *.lib
 *.obj
 *.exp
@@ -10,12 +11,11 @@ build_v2.0/
 *.pdb
 *.log
 
-# Third-party SDKs (huge binary dependencies)
+# Third-party SDKs (huge binary dependencies — need manual setup on other machines)
 NVIDIA GPU Computing Toolkit/
 TensorRT-10.16.1.11.Windows.amd64.cuda-13.2/
 onnxruntime/
 opencv/
-kmboxnet-main/
 TensorRT-YOLO-main/
 
 # CMake temp files
